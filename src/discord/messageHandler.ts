@@ -1,8 +1,7 @@
-import { Message } from 'discord.js';
+import { Message, Attachment } from 'discord.js';
 import { AIService } from '../ai/aiService';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
-
 export class MessageHandler {
   private aiService: AIService;
   private readonly BASE_DELAY = 500;
@@ -16,9 +15,10 @@ export class MessageHandler {
     try {
       if (this.shouldSkipMessage(message)) return;
 
-      const prompt = await this.buildPrompt(message);
-      const response = await this.getAIResponse(prompt);
+      const { prompt, images } = await this.buildPrompt(message);
+      const response = await this.getAIResponse(prompt, images);
       await this.sendResponseMessages(message, response);
+
       logger.info('Finished sending all messages');
     } catch (error) {
       logger.error('Error handling message:', error);
@@ -40,24 +40,57 @@ export class MessageHandler {
     return false;
   }
 
-  private async buildPrompt(message: Message): Promise<string> {
+  private async buildPrompt(message: Message): Promise<{ prompt: string; images: string[] }> {
     logger.info(`Received message from ${message.author.tag}: "${message.content}"`);
 
-    const contextPrompt = await this.getContextFromReply(message);
-    const cleanedPrompt = this.cleanPrompt(message, contextPrompt || message.content);
+    const images = this.getImagesFromMessage(message);
+    const contextResult = await this.getContextFromReply(message);
+    const basePrompt = contextResult?.prompt || message.content;
+    const allImages = [...images, ...(contextResult?.images || [])];
+
+    const cleanedPrompt = this.cleanPrompt(message, basePrompt);
 
     logger.info('Sending prompt to AI:', cleanedPrompt);
-    return cleanedPrompt;
+    logger.info(`Including ${allImages.length} images`);
+
+    return { prompt: cleanedPrompt, images: allImages };
   }
 
-  private async getContextFromReply(message: Message): Promise<string | null> {
+  private getImagesFromMessage(message: Message): string[] {
+    const images = [
+      ...message.attachments.filter(this.isImageAttachment).map(att => att.url),
+      ...this.extractImageUrls(message.content)
+    ];
+
+    if (images.length > 0) {
+      logger.info(`Found ${images.length} images in message`);
+    }
+
+    return images;
+  }
+
+  private isImageAttachment(attachment: Attachment): boolean {
+    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    return imageTypes.includes(attachment.contentType || '');
+  }
+
+  private extractImageUrls(content: string): string[] {
+    const urlRegex = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp))/gi;
+    return content.match(urlRegex) || [];
+  }
+
+  private async getContextFromReply(message: Message): Promise<{ prompt: string; images: string[] } | null> {
     if (!message.reference?.messageId) return null;
 
     try {
       const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+      const contextImages = this.getImagesFromMessage(repliedMessage);
       const contextPrompt = `[Previous message: "${repliedMessage.content}"] ${message.content}`;
       logger.info('Added context from replied message:', repliedMessage.content);
-      return contextPrompt;
+      if (contextImages.length > 0) {
+        logger.info(`Added ${contextImages.length} images from replied message`);
+      }
+      return { prompt: contextPrompt, images: contextImages };
     } catch (error) {
       logger.error('Error fetching replied message:', error);
       return null;
@@ -72,10 +105,11 @@ export class MessageHandler {
       .trim();
   }
 
-  private async getAIResponse(prompt: string): Promise<string> {
-    const response = await this.aiService.generateResponse(
-      config.promptTemplate.replace('{message}', prompt)
-    );
+  private async getAIResponse(prompt: string, images: string[]): Promise<string> {
+    const response = await this.aiService.generateResponse({
+      prompt: config.promptTemplate.replace('{message}', prompt),
+      images
+    });
     logger.info('Received AI response:', response);
     return response;
   }

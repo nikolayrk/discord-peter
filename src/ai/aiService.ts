@@ -1,4 +1,4 @@
-import { AIProvider } from './types';
+import { AIProvider, AIRequestParams } from './types';
 import { GeminiProvider } from './providers/gemini';
 
 export class AIService {
@@ -17,7 +17,7 @@ export class AIService {
     }
   }
 
-  async generateResponse(message: string): Promise<string> {
-    return this.provider.generateResponse(message);
+  async generateResponse(params: AIRequestParams): Promise<string> {
+    return this.provider.generateResponse(params);
   }
 }

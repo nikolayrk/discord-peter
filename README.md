@@ -24,8 +24,13 @@ Create a `.env` file in the root directory:
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 GEMINI_API_KEY=your_gemini_api_key
-MODEL=gemini_model
+TEXT_MODEL=your_text_model_name
+VISION_MODEL=your_vision_model_name
 ```
+
+Default values if not specified:
+- TEXT_MODEL: "gemini-2.0-flash"
+- VISION_MODEL: "gemini-1.5-flash"
 
 ## Installation
 

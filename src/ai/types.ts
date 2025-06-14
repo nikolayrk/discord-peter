@@ -1,5 +1,10 @@
+export interface AIRequestParams {
+  prompt: string;
+  images?: string[];
+}
+
 export interface AIProvider {
-  generateResponse(prompt: string): Promise<string>;
+  generateResponse(params: AIRequestParams): Promise<string>;
 }
 
 export interface AIResponse {
