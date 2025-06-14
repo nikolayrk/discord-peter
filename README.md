@@ -16,6 +16,7 @@ A Discord bot that responds as Peter Griffin from Family Guy using Google's Gemi
 - npm
 - Discord Bot Token
 - Google Gemini API Key
+- Docker (optional)
 
 ## Environment Variables
 
@@ -56,6 +57,16 @@ npm run lint
 
 # Run tests
 npm run test
+```
+
+## Docker Deployment
+
+```bash
+# Build the Docker image
+docker compose build
+
+# Run the container
+docker compose up -d
 ```
 
 ## Bot Usage
