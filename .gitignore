@@ -49,3 +49,10 @@ docker-compose.override.yml
 
 # Optional eslint cache
 .eslintcache
+
+# Remove assets from general ignore patterns
+!assets/
+!assets/*.png
+# Remove assets from general ignore patterns
+!assets/
+!assets/*.png

@@ -1,14 +1,20 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Discord Peter Bot Banner" width="100%">
+</p>
+
 # Discord Peter Bot
 
-A Discord bot that responds as Peter Griffin from Family Guy using Google's Gemini AI. The bot processes messages, maintains conversation context, and responds with Peter Griffin's characteristic style and humor.
+Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some fancy AI thing from Google (way smarter than me after that time I hit my head at the Clam), I'll chat with ya, look at your pictures, and keep the conversation going just like the real deal!
 
 ## Features
 
 - Responds to mentions with Peter Griffin-style responses
 - Uses Google's Gemini AI for natural language generation
+- Understands and describes images shared in chat
 - Supports conversation context through message replies
 - Natural typing simulation with adaptive delays
 - Handles multi-paragraph responses
+- Containerized for easy deployment
 
 ## Prerequisites
 
