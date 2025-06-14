@@ -77,10 +77,28 @@ docker compose up -d
 
 ## Bot Usage
 
-1. Invite the bot to your Discord server
-2. Mention the bot (@Peter) in any channel
-3. The bot will respond as Peter Griffin
-4. Reply to any of the bot's messages while mentioning it to maintain conversation context
+1. Create your Discord Bot:
+   - Visit the [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create a "New Application"
+   - Go to the "Bot" section and create a bot
+   - Save your bot token (you'll need it for the DISCORD_TOKEN env variable)
+   - Enable "Message Content Intent" in the Bot section
+   - For detailed instructions, see [Discord's Bot Creation Guide](https://discord.com/developers/docs/getting-started)
+2. Invite the bot to your server:
+   - In your application's OAuth2 section
+   - Select `bot` scope
+   - Select required permissions:
+     - Read Messages/View Channels
+     - Send Messages
+     - Read Message History
+   - Generate the invite URL and open it
+   - Select your server and authorize
+
+3. Start chatting:
+   - Mention your bot in any channel
+   - Send text messages, images, or both
+   - Reply to any message while mentioning the bot to maintain conversation context
+   - The bot will respond as Peter Griffin, including describing any images you share
 
 ## Contributing
 
