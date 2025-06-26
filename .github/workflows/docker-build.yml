@@ -29,5 +29,5 @@ jobs:
         tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
         build-args: |
           VERSION=${{ github.sha }}
-        cache-from: type=local,mode=max
-        cache-to: type=local,mode=max,dest=/tmp/.buildx-cache
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
