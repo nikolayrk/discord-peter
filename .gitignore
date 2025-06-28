@@ -34,7 +34,6 @@ pids/
 
 # Kubernetes secrets
 kubernetes/secrets/
-**/secret.yaml
 !kubernetes/secret.yaml.example
 
 # Docker

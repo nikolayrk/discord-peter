@@ -27,4 +27,8 @@ Dockerfile
 
 .git
 
+charts/discord-peter/.helmignore
+charts/discord-peter/templates/
+charts/discord-peter/*.yaml
+
 assets/
