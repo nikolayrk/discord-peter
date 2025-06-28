@@ -26,7 +26,7 @@ jobs:
             --charts charts/discord-peter \
             --target-branch ${{ github.event.pull_request.base.ref }} \
             --helm-extra-set-args "\
-              --set image.repository=ghcr.io/${{ github.repository }} \
-              --set image.tag=${{ github.event.workflow_run.head_sha }} \
-              --set secrets.discordToken=test-token \
-              --set secrets.geminiApiKey=test-key"
+              --set=image.repository=ghcr.io/${{ github.repository }} \
+              --set=image.tag=${{ github.event.workflow_run.head_sha }} \
+              --set=secrets.discordToken=test-token \
+              --set=secrets.geminiApiKey=test-key"

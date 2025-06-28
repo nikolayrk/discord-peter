@@ -18,3 +18,7 @@ config:
   textModel: "gemini-2.0-flash"
   visionModel: "gemini-1.5-flash"
   defaultProvider: "gemini"
+
+secrets:
+  discordToken: ""
+  geminiApiKey: ""
