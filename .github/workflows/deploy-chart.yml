@@ -1,0 +1,30 @@
+name: Deploy Helm Chart
+
+on:
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Deploy
+      uses: deliverybot/helm@v1
+      with:
+        release: discord-peter
+        namespace: discord-peter
+        chart: app
+        token: ${{ github.token }}
+        values: |
+          image:
+            repository=ghcr.io/${{ github.repository }}
+            tag=${{ github.sha }}
+          secrets:
+            discordToken: ${{ secrets.DISCORD_TOKEN }}
+            geminiApiKey: ${{ secrets.GEMINI_APIKEY }}
+      env:
+        KUBECONFIG_FILE: ${{ secrets.KUBECONFIG }}
