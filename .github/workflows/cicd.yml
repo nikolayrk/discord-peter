@@ -11,3 +11,7 @@ jobs:
   test-chart-workflow:
     needs: build-image-workflow
     uses: ./.github/workflows/test-chart.yml
+
+  release-chart-workflow:
+    needs: test-chart-workflow
+    uses: ./.github/workflows/release-chart.yml
