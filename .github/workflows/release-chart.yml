@@ -32,6 +32,7 @@ jobs:
         uses: helm/chart-releaser-action@v1.6.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_PACKAGE_PATH: charts
         with:
           charts_dir: charts
           skip_packaging: false
