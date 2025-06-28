@@ -21,11 +21,16 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
+      - name: Get current chart version
+        run: |
+          CHART_VERSION=$(yq e '.version' charts/discord-peter/Chart.yaml)
+          echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
+
       - name: Bump version
         id: bump
         uses: callowayproject/bump-my-version@master
         with:
-          args: patch
+          args: "patch --current-version=${{ env.CHART_VERSION }}"
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run chart-releaser
