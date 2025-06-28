@@ -35,7 +35,3 @@ jobs:
         with:
           charts_dir: charts
           skip_packaging: false
-          config: |
-            set-values:
-              - "image.repository=ghcr.io/${{ github.repository }}"
-              - "image.tag=${{ github.sha }}"
