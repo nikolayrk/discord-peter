@@ -3,6 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'charts/discord-peter/Chart.yaml'
 
 jobs:
   build-image-workflow:

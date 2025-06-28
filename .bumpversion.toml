@@ -6,6 +6,7 @@ search = "version: {current_version}"
 replace = "version: {new_version}"
 regex = false
 ignore_missing_version = false
+commit = true
 
 [[tool.bumpversion.files]]
-filename = "charts/discord-peter/Chart.yaml"  # Updated path
+filename = "charts/discord-peter/Chart.yaml"
