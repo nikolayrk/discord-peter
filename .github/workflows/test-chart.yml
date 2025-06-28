@@ -1,0 +1,32 @@
+name: Test Helm Chart
+
+on:
+  workflow_call:
+
+jobs:
+  test-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.8.0
+
+      - name: Run chart-testing (install)
+        run: |
+          ct install \
+            --charts charts/discord-peter \
+            --target-branch ${{ github.event.pull_request.base.ref }} \
+            --helm-extra-set-args "\
+              --set=image.repository=ghcr.io/${{ github.repository }} \
+              --set=image.tag=${{ github.event.workflow_run.head_sha }} \
+              --set=secrets.discordToken=test-token \
+              --set=secrets.geminiApiKey=test-key"

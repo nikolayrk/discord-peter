@@ -1,0 +1,13 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-image-workflow:
+    uses: ./.github/workflows/docker-build.yml
+
+  test-chart-workflow:
+    needs: build-image-workflow
+    uses: ./.github/workflows/test-chart.yml
