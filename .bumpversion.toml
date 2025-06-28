@@ -10,3 +10,5 @@ tag = false
 
 [[tool.bumpversion.files]]
 filename = "charts/discord-peter/Chart.yaml"
+search = "version: {current_version}"
+replace = "version: {new_version}"
