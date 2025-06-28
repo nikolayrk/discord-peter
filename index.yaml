@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   discord-peter:
   - apiVersion: v2
+    created: "2025-06-28T15:55:17.852786242Z"
+    description: A Discord bot that responds as Peter Griffin using AI
+    digest: b1ef759e921dceecabfe65b21c4ca09106b08a5bc5035f96cabcaf11408f2fd5
+    name: discord-peter
+    type: application
+    urls:
+    - https://github.com/nikolayrk/discord-peter/releases/download/discord-peter-0.1.2/discord-peter-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
     created: "2025-06-28T15:15:27.109523278Z"
     description: A Discord bot that responds as Peter Griffin using AI
     digest: d626051580309f51a98d6f3f0539f195e735c2991f04c48eef3a35a9f71e4013
@@ -10,4 +19,4 @@ entries:
     urls:
     - https://github.com/nikolayrk/discord-peter/releases/download/discord-peter-0.1.1/discord-peter-0.1.1.tgz
     version: 0.1.1
-generated: "2025-06-28T15:15:27.109532315Z"
+generated: "2025-06-28T15:55:17.852793025Z"
