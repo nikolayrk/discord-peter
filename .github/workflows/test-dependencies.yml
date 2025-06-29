@@ -18,12 +18,12 @@ jobs:
     if: github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]'
     steps:
       - name: Checkout PR branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18.17.0'
           cache: 'npm'
@@ -42,7 +42,7 @@ jobs:
 
       - name: Approve and merge Dependabot PR
         if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && success() }}
-        uses: hmarr/auto-approve-action@v3
+        uses: hmarr/auto-approve-action@v4
         with:
           github-token: ${{ secrets.GH_TOKEN }}
 
