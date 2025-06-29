@@ -10,6 +10,10 @@ updates:
       - "npm"
     reviewers:
       - "nikolayrk"
+    groups:
+      npm:
+        patterns:
+          - "*"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -18,9 +22,13 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "npm"
+      - "docker"
     reviewers:
       - "nikolayrk"
+    groups:
+      docker:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -29,6 +37,10 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "npm"
+      - "github-actions"
     reviewers:
       - "nikolayrk"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
