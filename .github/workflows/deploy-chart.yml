@@ -2,6 +2,13 @@ name: Deploy Helm Chart
 
 on:
   workflow_call:
+    secrets:
+      KUBECONFIG:
+        required: true
+      DISCORD_TOKEN:
+        required: true
+      GEMINI_API_KEY:
+        required: true
 
 jobs:
   deploy:
