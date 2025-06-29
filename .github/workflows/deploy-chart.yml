@@ -24,9 +24,9 @@ jobs:
     - name: Deploy
       run: |
         echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-
         export KUBECONFIG=$(pwd)/kubeconfig.yaml
-        helm upgrade --install discord-peter app \
+        helm repo add ${{ github.repository }} https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        helm upgrade --install discord-peter ${{ github.repository }}/discord-peter \
           --namespace discord-peter \
           --set image.repository=ghcr.io/${{ github.repository }} \
           --set image.tag=${{ github.sha }} \
