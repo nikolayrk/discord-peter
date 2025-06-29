@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  test:
+  test-chart:
     runs-on: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v3
