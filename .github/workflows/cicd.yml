@@ -5,7 +5,8 @@ on:
     branches: [ main ]
     paths-ignore:
       - '**/README.md'
-      - '.github/**'
+      - '**/charts/**/Chart.yaml' # Don't run on version bump commits
+      # - '.github/**'
     
 concurrency:
   group: "cicd"
@@ -22,6 +23,8 @@ jobs:
   release:
     needs: test
     uses: ./.github/workflows/release-chart.yml
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   deploy:
     needs: release

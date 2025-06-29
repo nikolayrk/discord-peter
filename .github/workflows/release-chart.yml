@@ -2,6 +2,9 @@ name: Release Helm Chart
 
 on:
   workflow_call:
+    secrets:
+      GH_TOKEN:
+        required: true
 
 jobs:
   release-chart:
@@ -31,12 +34,12 @@ jobs:
         uses: callowayproject/bump-my-version@master
         with:
           args: "patch --current-version=${{ env.CHART_VERSION }}"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_TOKEN: "${{ secrets.GH_TOKEN }}"
 
   deploy-repo:
     needs: release-chart
