@@ -11,7 +11,7 @@ on:
         required: true
 
 jobs:
-  deploy:
+  deploy-chart:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
@@ -21,12 +21,11 @@ jobs:
       with:
         version: v3.12.0
 
-    - name: Configure Kubernetes context
-      run: |
-        echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-        
     - name: Deploy
       run: |
+        echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+
+        export KUBECONFIG=$(pwd)/kubeconfig.yaml
         helm upgrade --install discord-peter app \
           --namespace discord-peter \
           --set image.repository=ghcr.io/${{ github.repository }} \
@@ -34,5 +33,3 @@ jobs:
           --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
           --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
           --create-namespace
-      env:
-        KUBECONFIG: $(pwd)/kubeconfig.yaml
