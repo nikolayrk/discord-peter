@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy Helm Repository to GitHub Pages
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ permissions:
   id-token: write
 
 jobs:
-  deploy-pages:
+  deploy-repo:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

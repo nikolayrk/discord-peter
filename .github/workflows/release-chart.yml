@@ -38,6 +38,6 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-  deploy-registry:
+  deploy-repo:
     needs: release-chart
-    uses: ./.github/workflows/deploy-pages.yml
+    uses: ./.github/workflows/deploy-repo.yml
