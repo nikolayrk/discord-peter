@@ -9,15 +9,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-image-workflow:
-    uses: ./.github/workflows/docker-build.yml
+  build:
+    uses: ./.github/workflows/build-image.yml
 
-  test-chart-workflow:
-    needs: build-image-workflow
+  test:
+    needs: build
     uses: ./.github/workflows/test-chart.yml
 
   release:
-    needs: test-chart-workflow
+    needs: test
     uses: ./.github/workflows/release-chart.yml
 
   deploy:

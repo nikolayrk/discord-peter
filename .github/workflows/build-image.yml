@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  build:
+  build-image:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -24,7 +24,9 @@ jobs:
       with:
         platforms: linux/arm64/v8
         push: true
-        tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        tags: |
+          ghcr.io/${{ github.repository }}:${{ github.sha }}
+          ghcr.io/${{ github.repository }}:latest
         build-args: |
           VERSION=${{ github.sha }}
         cache-from: type=gha
