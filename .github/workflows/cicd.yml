@@ -23,3 +23,7 @@ jobs:
   deploy:
     needs: release
     uses: ./.github/workflows/deploy-chart.yml
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
