@@ -3,8 +3,10 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'charts/discord-peter/Chart.yaml'
+    
+concurrency:
+  group: "cicd"
+  cancel-in-progress: false
 
 jobs:
   build-image-workflow:
@@ -14,6 +16,10 @@ jobs:
     needs: build-image-workflow
     uses: ./.github/workflows/test-chart.yml
 
-  release-chart-workflow:
+  release:
     needs: test-chart-workflow
     uses: ./.github/workflows/release-chart.yml
+
+  deploy:
+    needs: release
+    uses: ./.github/workflows/deploy-chart.yml

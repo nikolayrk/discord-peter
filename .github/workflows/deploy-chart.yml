@@ -1,10 +1,7 @@
 name: Deploy Helm Chart
 
 on:
-  workflow_run:
-    workflows: ["pages build and deployment"]
-    types:
-      - completed
+  workflow_call:
 
 jobs:
   deploy:
@@ -25,6 +22,6 @@ jobs:
             tag=${{ github.sha }}
           secrets:
             discordToken: ${{ secrets.DISCORD_TOKEN }}
-            geminiApiKey: ${{ secrets.GEMINI_APIKEY }}
+            geminiApiKey: ${{ secrets.GEMINI_API_KEY }}
       env:
         KUBECONFIG_FILE: ${{ secrets.KUBECONFIG }}

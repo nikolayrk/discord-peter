@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  release:
+  release-chart:
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -37,3 +37,7 @@ jobs:
         uses: helm/chart-releaser-action@v1.6.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  deploy-registry:
+    needs: release-chart
+    uses: ./.github/workflows/deploy-pages.yml
