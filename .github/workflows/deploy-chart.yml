@@ -9,19 +9,22 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Deploy
-      uses: glopezep/helm@v1.7.1 # Fork of deliverybot/helm (fixes Docker build error)
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
       with:
-        release: discord-peter
-        namespace: discord-peter
-        chart: app
-        token: ${{ github.token }}
-        values: |
-          image:
-            repository=ghcr.io/${{ github.repository }}
-            tag=${{ github.sha }}
-          secrets:
-            discordToken: ${{ secrets.DISCORD_TOKEN }}
-            geminiApiKey: ${{ secrets.GEMINI_API_KEY }}
-      env:
-        KUBECONFIG_FILE: ${{ secrets.KUBECONFIG }}
+        version: v3.12.0
+
+    - name: Configure Kubernetes context
+      run: |
+        echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+        export KUBECONFIG=$(pwd)/kubeconfig.yaml
+
+    - name: Deploy
+      run: |
+        helm upgrade --install discord-peter app \
+          --namespace discord-peter \
+          --set image.repository=ghcr.io/${{ github.repository }} \
+          --set image.tag=${{ github.sha }} \
+          --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
+          --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
+          --create-namespace
