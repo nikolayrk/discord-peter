@@ -6,6 +6,7 @@ export class MessageHandler {
   private aiService: AIService;
   private readonly BASE_DELAY = 500;
   private readonly CHARS_PER_SECOND = 20;
+  private readonly RANDOM_RESPONSE_CHANCE = 0.01; // 1% chance
 
   constructor() {
     this.aiService = new AIService(config.ai.defaultProvider);
@@ -156,8 +157,10 @@ export class MessageHandler {
   }
 
   private shouldRespond(message: Message): boolean {
-    const shouldRespond = message.mentions.has(message.client.user!);
-    logger.debug(`Message ${shouldRespond ? 'requires' : 'does not require'} response`);
+    const isRandomResponse = Math.random() < this.RANDOM_RESPONSE_CHANCE;
+    const shouldRespond = message.mentions.has(message.client.user!) || isRandomResponse;
+    const reason = message.mentions.has(message.client.user!) ? 'mention' : (isRandomResponse ? 'random' : 'no');
+    logger.debug(`Message ${shouldRespond ? 'requires' : 'does not require'} response due to ${reason}`);
     return shouldRespond;
   }
 
