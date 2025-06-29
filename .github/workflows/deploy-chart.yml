@@ -24,8 +24,7 @@ jobs:
     - name: Configure Kubernetes context
       run: |
         echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-        export KUBECONFIG=$(pwd)/kubeconfig.yaml
-
+        
     - name: Deploy
       run: |
         helm upgrade --install discord-peter app \
@@ -35,3 +34,5 @@ jobs:
           --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
           --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
           --create-namespace
+      env:
+        KUBECONFIG: $(pwd)/kubeconfig.yaml
