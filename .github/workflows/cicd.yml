@@ -22,6 +22,8 @@ jobs:
   release:
     needs: test
     uses: ./.github/workflows/release-chart.yml
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   deploy:
     needs: release

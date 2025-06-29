@@ -31,7 +31,7 @@ jobs:
         uses: callowayproject/bump-my-version@master
         with:
           args: "patch --current-version=${{ env.CHART_VERSION }}"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
