@@ -46,6 +46,6 @@ jobs:
 
       - name: Approve and merge Dependabot PR
         if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && github.event_name == 'pull_request' && success() }}
-        uses: hmarr/auto-approve-action@v3
+        uses: hmarr/auto-approve-action@v4
         with:
           github-token: ${{ secrets.GH_TOKEN }}
