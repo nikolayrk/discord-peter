@@ -1,0 +1,3 @@
+# This file is needed otherwise the release-chart.yml workflow fails with the below error from callowayproject/bump-my-version
+#
+# Error: No file in /home/runner/work/discord-peter/discord-peter matched to [**/requirements.txt or **/pyproject.toml], make sure you have checked out the target repository
