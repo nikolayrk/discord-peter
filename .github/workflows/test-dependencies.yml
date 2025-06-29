@@ -47,7 +47,6 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN }}
 
   enable-auto-merge:
-    name: Mark the PR for auto-merge
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]'
     steps:
