@@ -55,3 +55,7 @@ docker-compose.override.yml
 # Remove assets from general ignore patterns
 !assets/
 !assets/*.png
+
+# Act files
+.vars
+.secrets
