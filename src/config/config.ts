@@ -4,7 +4,7 @@ export const config = {
   },
   ai: {
     geminiApiKey: process.env.GEMINI_API_KEY || '',
-    defaultProvider: 'gemini',
+    defaultProvider: process.env.DEFAULT_PROVIDER || 'gemini',
     textModel: process.env.TEXT_MODEL || 'gemini-2.0-flash',
     visionModel: process.env.VISION_MODEL || 'gemini-1.5-flash',
   },

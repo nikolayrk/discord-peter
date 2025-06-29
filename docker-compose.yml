@@ -6,6 +6,7 @@ services:
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER}
       - TEXT_MODEL=${TEXT_MODEL}
       - VISION_MODEL=${VISION_MODEL}
     restart: unless-stopped

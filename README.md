@@ -11,9 +11,11 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Uses Google's Gemini AI for natural language generation
 - Understands and describes images shared in chat
 - Supports conversation context through message replies
+- Has a 1% chance of responding to any message, even without a mention
 - Natural typing simulation with adaptive delays
 - Handles multi-paragraph responses
 - Containerized for easy deployment
+- Helm chart for easy deployment to Kubernetes
 
 ## Prerequisites
 
@@ -22,6 +24,8 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Discord Bot Token
 - Google Gemini API Key
 - Docker (optional)
+- Kubernetes cluster (optional)
+- Helm installed (optional)
 
 ## Environment Variables
 
@@ -30,6 +34,7 @@ Create a `.env` file in the root directory:
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 GEMINI_API_KEY=your_gemini_api_key
+DEFAULT_PROVIDER=gemini
 TEXT_MODEL=your_text_model_name
 VISION_MODEL=your_vision_model_name
 ```
@@ -99,11 +104,6 @@ docker compose up -d
 ## Helm Deployment
 
 This project can be deployed using Helm, a package manager for Kubernetes. The Helm chart is conveniently hosted on the GitHub Actions-generated repository within this project.
-
-### Prerequisites
-
-- Kubernetes cluster
-- Helm installed
 
 ### Installation
 
