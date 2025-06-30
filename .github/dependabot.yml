@@ -8,8 +8,6 @@ updates:
     labels:
       - "dependencies"
       - "npm"
-    reviewers:
-      - "nikolayrk"
     groups:
       npm:
         patterns:
@@ -23,8 +21,6 @@ updates:
     labels:
       - "dependencies"
       - "docker"
-    reviewers:
-      - "nikolayrk"
     groups:
       docker:
         patterns:
@@ -38,8 +34,6 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
-    reviewers:
-      - "nikolayrk"
     groups:
       github-actions:
         patterns:
