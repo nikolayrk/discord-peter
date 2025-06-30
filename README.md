@@ -10,6 +10,7 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Responds to mentions with Peter Griffin-style responses
 - Uses Google's Gemini AI for natural language generation
 - Understands and describes images shared in chat
+- Includes recent channel messages and their images in context for more coherent conversations.
 - Supports conversation context through message replies
 - Has a 1% chance of responding to any message, even without a mention
 - Natural typing simulation with adaptive delays
@@ -65,7 +66,10 @@ Default values if not specified:
 3. Start chatting:
    - Mention your bot in any channel
    - Send text messages, images, or both
-   - Reply to any message while mentioning the bot to maintain conversation context
+
+   - Reply to any message while mentioning the bot to maintain conversation context.
+   - The bot automatically includes recent messages (last 10 minutes) from the channel (excluding bot messages) to maintain better context.
+   - Any images attached to those recent messages are also included in the context.
    - The bot will respond as Peter Griffin, including describing any images you share
 
 ## Installation

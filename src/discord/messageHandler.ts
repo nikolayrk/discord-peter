@@ -70,8 +70,17 @@ export class MessageHandler {
 
     // Sort recent messages by creation time in descending order
     const sortedRecentMessages = [...recentMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
     sortedRecentMessages.forEach(recentMessage => {
-      basePromptParts.push(`[Recent Message: ${recentMessage.content}]`);
+      // Add image URLs from attachments to the prompt
+      const imageAttachments = recentMessage.attachments
+        .filter(this.isImageAttachment)
+        .map(attachment => attachment.url);
+      let messageContent = `[Recent Message: ${recentMessage.content}]`;
+      if (imageAttachments.length > 0) {
+        messageContent += ` [Images: ${imageAttachments.join(', ')}]`;
+      }
+      basePromptParts.push(messageContent);
     });
 
     const combinedPrompt = basePromptParts.join('\n---\n');
