@@ -1,4 +1,4 @@
-import { Message, Attachment } from 'discord.js';
+import { Message, Attachment, Collection } from 'discord.js';
 import { AIService } from '../ai/aiService';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
@@ -6,7 +6,10 @@ export class MessageHandler {
   private aiService: AIService;
   private readonly BASE_DELAY = 500;
   private readonly CHARS_PER_SECOND = 20;
-  private readonly RANDOM_RESPONSE_CHANCE = 0.01; // 1% chance
+  private readonly RANDOM_RESPONSE_CHANCE = 0.01; // 1% chance for a response to an unprompted message
+  private readonly CONTEXT_LAST_MESSAGES_IN_MINS = 10; // context messages from the last 10 minutes
+  private readonly CONTEXT_LAST_MESSAGE_OLDEST_HOURS = 24; // context the last message if within 24 hours
+  private readonly MAX_CONTEXT_LAST_MESSAGES = 50;
 
   constructor() {
     this.aiService = new AIService(config.ai.defaultProvider);
@@ -46,7 +49,9 @@ export class MessageHandler {
 
     const images = this.getImagesFromMessage(message);
     const contextResult = await this.getContextFromReply(message);
-    const basePrompt = contextResult?.prompt || message.content;
+    const recentMessages = await this.getRecentMessages(message);
+
+    const basePrompt = this.buildBasePrompt(contextResult, recentMessages, message);
     const allImages = [...images, ...(contextResult?.images || [])];
 
     const cleanedPrompt = this.cleanPrompt(message, basePrompt);
@@ -55,6 +60,22 @@ export class MessageHandler {
     logger.info(`Including ${allImages.length} images`);
 
     return { prompt: cleanedPrompt, images: allImages };
+  }
+
+  private buildBasePrompt(contextResult: any, recentMessages: Message[], message: Message): string {
+    const basePromptParts = [message.content]; // Start with the current message
+    if (contextResult?.prompt) {
+      basePromptParts.push(`[Reply Context: ${contextResult.prompt}]`);
+    }
+
+    // Sort recent messages by creation time in descending order
+    const sortedRecentMessages = [...recentMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    sortedRecentMessages.forEach(recentMessage => {
+      basePromptParts.push(`[Recent Message: ${recentMessage.content}]`);
+    });
+
+    const combinedPrompt = basePromptParts.join('\n---\n');
+    return combinedPrompt;
   }
 
   private getImagesFromMessage(message: Message): string[] {
@@ -86,7 +107,7 @@ export class MessageHandler {
     try {
       const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
       const contextImages = this.getImagesFromMessage(repliedMessage);
-      const contextPrompt = `[Previous message: "${repliedMessage.content}"] ${message.content}`;
+      const contextPrompt = `[Previous message: "${repliedMessage.content}" ${message.content}]`;
       logger.info('Added context from replied message:', repliedMessage.content);
       if (contextImages.length > 0) {
         logger.info(`Added ${contextImages.length} images from replied message`);
@@ -166,5 +187,46 @@ export class MessageHandler {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async getRecentMessages(message: Message): Promise<Message[]> {
+    try {
+      const fetchedMessages = await message.channel.messages.fetch({ limit: this.MAX_CONTEXT_LAST_MESSAGES });
+      const messages = await this.getMessagesFromPastTenMinutes(message, fetchedMessages);
+      const lastMessage = await this.getLastMessageWithinOneDay(message, fetchedMessages);
+
+      let combinedMessages: Message[] = [...messages];
+      if (lastMessage && !messages.find(m => m.id === lastMessage.id) && lastMessage.id !== message.id) {
+        combinedMessages.push(lastMessage);
+      }
+
+      logger.info(`Added ${combinedMessages.length} recent messages`);
+      return combinedMessages;
+    } catch (error) {
+      logger.error('Error fetching messages:', error);
+      return [];
+    }
+  }
+
+  private async getMessagesFromPastTenMinutes(message: Message, fetchedMessages: Collection<string, Message<boolean>>): Promise<Message[]> {
+    const now = Date.now();
+    const tenMinutesAgo = new Date(now - this.CONTEXT_LAST_MESSAGES_IN_MINS * 60 * 1000);
+    const isWithinTenMinutes = (m: Message) => m.createdAt >= tenMinutesAgo && m.createdAt <= new Date(now);
+
+    const filteredMessages = fetchedMessages.filter(m => isWithinTenMinutes(m) && m.id !== message.id && !m.author.bot);
+    return [...filteredMessages.values()];
+  }
+
+  private async getLastMessageWithinOneDay(message: Message, fetchedMessages: any): Promise<Message | null> {
+    const now = Date.now();
+    const oneDayAgo = new Date(now - this.CONTEXT_LAST_MESSAGE_OLDEST_HOURS * 60 * 60 * 1000);
+    const isWithinOneDay = (m: Message) => m.createdAt >= oneDayAgo;
+    const lastMessage = fetchedMessages.last();
+
+    if (lastMessage && isWithinOneDay(lastMessage) && lastMessage.id !== message.id && !lastMessage.author.bot) {
+      return lastMessage;
+    }
+
+    return null;
   }
 }
