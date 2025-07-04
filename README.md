@@ -2,7 +2,7 @@
   <img src="assets/banner.png" alt="Discord Peter Bot Banner" width="100%">
 </p>
 
-# <img src="https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico" height="25"> Discord Peter
+Discord Peter
 Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some fancy AI thing from Google (way smarter than me after that time I hit my head at the Clam), I'll chat with ya, look at your pictures, and keep the conversation going just like the real deal!
 
 ## Features
