@@ -1,7 +1,7 @@
 apiVersion: v2
 name: discord-peter
 description: A Discord bot that responds as Peter Griffin using AI
-version: 0.1.29
+version: 1.0.0
 type: application
 dependencies:
   - name: redis
