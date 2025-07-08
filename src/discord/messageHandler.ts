@@ -201,7 +201,7 @@ export class MessageHandler {
   private async getRecentMessages(message: Message): Promise<Message[]> {
     try {
       const fetchedMessages = await message.channel.messages.fetch({ limit: this.MAX_CONTEXT_LAST_MESSAGES });
-      const messages = await this.getMessagesFromPastTenMinutes(message, fetchedMessages);
+      const messages = this.filterMessages(message, fetchedMessages);
       const lastMessage = await this.getLastMessageWithinOneDay(message, fetchedMessages);
 
       let combinedMessages: Message[] = [...messages];
@@ -217,13 +217,22 @@ export class MessageHandler {
     }
   }
 
-  private async getMessagesFromPastTenMinutes(message: Message, fetchedMessages: Collection<string, Message<boolean>>): Promise<Message[]> {
+  private filterMessages(message: Message, fetchedMessages: Collection<string, Message<boolean>>): Message[] {
     const now = Date.now();
     const tenMinutesAgo = new Date(now - this.CONTEXT_LAST_MESSAGES_IN_MINS * 60 * 1000);
-    const isWithinTenMinutes = (m: Message) => m.createdAt >= tenMinutesAgo && m.createdAt <= new Date(now);
+    const messages: Message[] = [];
 
-    const filteredMessages = fetchedMessages.filter(m => isWithinTenMinutes(m) && m.id !== message.id && !m.author.bot);
-    return [...filteredMessages.values()];
+    for (const fetchedMessage of fetchedMessages.values()) {
+      if (fetchedMessage.author.id === message.client.user?.id) {
+        break; // Stop if the message is from the bot itself
+      }
+
+      if (fetchedMessage.createdAt >= tenMinutesAgo && fetchedMessage.createdAt <= new Date(now) && fetchedMessage.id !== message.id && !fetchedMessage.author.bot) {
+        messages.push(fetchedMessage);
+      }
+    }
+
+    return messages;
   }
 
   private async getLastMessageWithinOneDay(message: Message, fetchedMessages: any): Promise<Message | null> {
