@@ -9,4 +9,19 @@ services:
       - DEFAULT_PROVIDER=${DEFAULT_PROVIDER}
       - TEXT_MODEL=${TEXT_MODEL}
       - VISION_MODEL=${VISION_MODEL}
+      - REDIS_URL=redis://redis:6379
     restart: unless-stopped
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+    name: discord-peter-redis-data

@@ -2,10 +2,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "discord-peter.fullname" . }}-config
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "discord-peter.labels" . | nindent 4 }}
 data:
-  TEXT_MODEL: {{ .Values.config.textModel }}
-  VISION_MODEL: {{ .Values.config.visionModel }}
-  DEFAULT_PROVIDER: {{ .Values.config.defaultProvider }}
+  TEXT_MODEL: {{ .Values.config.textModel | quote }}
+  VISION_MODEL: {{ .Values.config.visionModel | quote }}
+  DEFAULT_PROVIDER: {{ .Values.config.defaultProvider | quote }}
+  REDIS_URL: {{ .Values.config.redisUrl | default (printf "redis://%s-redis-master:6379" .Release.Name) | quote }}
