@@ -9,7 +9,8 @@ on:
         required: true
       GEMINI_API_KEY:
         required: true
-
+      REDIS_STORAGE_CLASS:
+        required: true
 jobs:
   deploy-chart:
     runs-on: ubuntu-latest
@@ -21,16 +22,21 @@ jobs:
       with:
         version: v3.12.0
 
+    - name: Update Helm Dependencies
+      run: helm dependency update ./charts/discord-peter
+
     - name: Deploy
       run: |
         echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
 
         export KUBECONFIG=$(pwd)/kubeconfig.yaml
-        helm repo add discord-peter-repo https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-        helm upgrade --install discord-peter discord-peter-repo/discord-peter \
+        helm upgrade --install discord-peter ./charts/discord-peter \
           --namespace discord-peter \
+          --create-namespace \
           --set image.repository=ghcr.io/${{ github.repository }} \
           --set image.tag=${{ github.sha }} \
           --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
           --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
-          --create-namespace
+          --set redis.master.persistence.enabled=true \
+          --set redis.master.persistence.storageClass=${{ secrets.REDIS_STORAGE_CLASS }} \
+          --set redis.master.persistence.size=1Gi

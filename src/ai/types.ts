@@ -1,6 +1,9 @@
+import { Content } from '@google/genai';
+
 export interface AIRequestParams {
   prompt: string;
   images?: string[];
+  history?: Content[];
 }
 
 export interface AIProvider {

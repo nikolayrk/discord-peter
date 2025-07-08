@@ -3,3 +3,8 @@ name: discord-peter
 description: A Discord bot that responds as Peter Griffin using AI
 version: 0.1.29
 type: application
+dependencies:
+  - name: redis
+    version: "18.18.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled

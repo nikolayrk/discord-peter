@@ -38,3 +38,16 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  - package-ecosystem: "helm"
+    directory: "/charts/discord-peter"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "helm"
+    groups:
+      helm:
+        patterns:
+          - "*"

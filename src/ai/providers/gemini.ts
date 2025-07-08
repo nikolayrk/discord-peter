@@ -1,6 +1,6 @@
 import { BaseAIProvider } from './base';
 import { config } from '../../config/config';
-import { GoogleGenAI, createUserContent } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { logger } from '../../utils/logger';
 import { AIRequestParams } from '../types';
 
@@ -8,6 +8,19 @@ interface ImageData {
   inlineData: {
     data: string;
     mimeType: string;
+  };
+}
+
+function createUserContent(parts: any[]) {
+  return {
+    role: 'user',
+    parts: parts.map(part => {
+      if (typeof part === 'string') {
+        return { text: part };
+      } else {
+        return part;
+      }
+    })
   };
 }
 
@@ -46,8 +59,23 @@ export class GeminiProvider extends BaseAIProvider {
   }
   
   async generateResponse(params: AIRequestParams): Promise<string> {
+    const { prompt, images, history } = params;
+    const modelName = (!images || images.length === 0) ? this.textModelName : this.visionModelName;
+
     try {
-      return await this.generateAppropriateResponse(params);
+      const chat = this.ai.chats.create({
+        model: modelName,
+        history: history || [],
+        config: {
+          systemInstruction: config.systemInstruction
+        }
+      });
+
+      const imageParts = images ? await this.processImages(images) : [];
+      const messagePayload = [prompt, ...imageParts];
+
+      const response = await chat.sendMessage({ message: messagePayload });
+      return response.text ?? 'Empty chat response';
     } catch (error) {
       logger.error('Gemini API error:', error);
       throw new Error(this.formatError(error));
@@ -58,89 +86,34 @@ export class GeminiProvider extends BaseAIProvider {
     params: AIRequestParams,
     onChunk: (chunk: string) => void
   ): Promise<void> {
-    try {
-      const { prompt, images } = params;
+    const { prompt, images, history } = params;
+    const modelName = (!images || images.length === 0) ? this.textModelName : this.visionModelName;
       
-      if (!images || images.length === 0) {
-        await this.generateTextStream(prompt, onChunk);
-      } else {
-        await this.generateVisionStream(prompt, images, onChunk);
+    try {
+      const chat = this.ai.chats.create({
+        model: modelName,
+        history: history || [],
+        config: {
+          systemInstruction: config.systemInstruction
+        }
+    });
+
+      const imageParts = images ? await this.processImages(images) : [];
+      const messagePayload = [prompt, ...imageParts];
+
+      const responseStream = await chat.sendMessageStream({
+        message: messagePayload,
+      });
+
+    for await (const chunk of responseStream) {
+      if (chunk.text) {
+        onChunk(chunk.text);
       }
+    }
     } catch (error) {
       logger.error('Gemini API streaming error:', error);
       throw new Error(this.formatError(error));
-    }
   }
-
-  private async generateTextStream(
-    prompt: string,
-    onChunk: (chunk: string) => void
-  ): Promise<void> {
-    const responseStream = await this.ai.models.generateContentStream({
-      model: this.textModelName,
-      contents: prompt,
-      config: {
-        systemInstruction: config.systemInstructions
-      }
-    });
-
-    for await (const chunk of responseStream) {
-      if (chunk.text) {
-        onChunk(chunk.text);
-      }
-    }
-  }
-
-  private async generateVisionStream(
-    prompt: string,
-    images: string[],
-    onChunk: (chunk: string) => void
-  ): Promise<void> {
-    logger.info(`Processing ${images.length} images with prompt for streaming`);
-    const imageParts = await this.processImages(images);
-
-    const responseStream = await this.ai.models.generateContentStream({
-      model: this.visionModelName,
-      contents: [createUserContent([prompt, ...imageParts])],
-      config: {
-        systemInstruction: config.systemInstructions
-      }
-    });
-
-    for await (const chunk of responseStream) {
-      if (chunk.text) {
-        onChunk(chunk.text);
-      }
-    }
-  }
-
-  private async generateAppropriateResponse(params: AIRequestParams): Promise<string> {
-    const { prompt, images } = params;
-    
-    if (!images || images.length === 0) {
-      return this.generateTextResponse(prompt);
-    }
-
-    return this.generateVisionResponse(prompt, images);
-  }
-
-  private async generateTextResponse(prompt: string): Promise<string> {
-    const response = await this.ai.models.generateContent({
-      model: this.textModelName,
-      contents: prompt,
-    });
-    return response.text ?? 'Empty text model response';
-  }
-
-  private async generateVisionResponse(prompt: string, images: string[]): Promise<string> {
-    logger.info(`Processing ${images.length} images with prompt`);
-    const imageParts = await this.processImages(images);
-    
-    const response = await this.ai.models.generateContent({
-      model: this.visionModelName,
-      contents: [createUserContent([prompt, ...imageParts])],
-    });
-    return response.text ?? 'Empty vision model response';
   }
 
   private async processImages(images: string[]): Promise<ImageData[]> {

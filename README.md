@@ -7,16 +7,15 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 
 ## Features
 
-- Responds to mentions with Peter Griffin-style responses
+- Starts new conversations when you mention (`@`) the bot
+- Maintains long-term conversational context when you reply to its messages
+- Uses Redis to store and retrieve chat histories
+- Understands and describes images shared in new messages and replies
 - Uses Google's Gemini AI for natural language generation
-- Understands and describes images shared in chat
-- Includes recent channel messages and their images in context for more coherent conversations.
-- Supports conversation context through message replies
 - Has a 1% chance of responding to any message, even without a mention
-- Natural typing simulation with adaptive delays
-- Handles multi-paragraph responses
-- Containerized for easy deployment
-- Helm chart for easy deployment to Kubernetes
+- Natural typing simulation for responses
+- Containerized for easy deployment with Docker
+- Includes a Helm chart for easy and configurable deployment to Kubernetes
 
 ## Prerequisites
 
@@ -24,9 +23,10 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - npm
 - Discord Bot Token
 - Google Gemini API Key
+- Redis (for local development)
 - Docker (optional)
 - Kubernetes cluster (optional)
-- Helm installed (optional)
+- Helm (optional)
 
 ## Environment Variables
 
@@ -35,14 +35,16 @@ Create a `.env` file in the root directory:
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 GEMINI_API_KEY=your_gemini_api_key
+REDIS_URL=redis://localhost:6379
 DEFAULT_PROVIDER=gemini
 TEXT_MODEL=your_text_model_name
 VISION_MODEL=your_vision_model_name
 ```
 
 Default values if not specified:
-- TEXT_MODEL: "gemini-2.0-flash"
-- VISION_MODEL: "gemini-1.5-flash"
+- `TEXT_MODEL`: "gemini-2.0-flash"
+- `VISION_MODEL`: "gemini-1.5-flash"
+- `REDIS_URL`: The bot will use `redis://redis:6379` when running inside Docker Compose.
 
 ## Bot Usage
 
@@ -50,28 +52,19 @@ Default values if not specified:
    - Visit the [Discord Developer Portal](https://discord.com/developers/applications)
    - Create a "New Application"
    - Go to the "Bot" section and create a bot
-   - Save your bot token (you'll need it for the DISCORD_TOKEN env variable)
-   - Enable "Message Content Intent" in the Bot section
-   - For detailed instructions, see [Discord's Bot Creation Guide](https://discord.com/developers/docs/getting-started)
+   - Save your bot token (for the `DISCORD_TOKEN` variable)
+   - Enable "Message Content Intent" under the Bot section
 2. Invite the bot to your server:
-   - In your application's OAuth2 section
-   - Select `bot` scope
+   - In your application's OAuth2 section, go to URL Generator
+   - Select the `bot` scope
    - Select required permissions:
      - Read Messages/View Channels
      - Send Messages
      - Read Message History
-   - Generate the invite URL and open it
-   - Select your server and authorize
-
+   - Generate the invite URL, open it, and authorize it for your server
 3. Start chatting:
-   - Mention your bot in any channel
-   - Send text messages, images, or both
-
-   - Reply to any message while mentioning the bot to maintain conversation context.
-   - The bot automatically includes recent messages (last 10 minutes) from the channel (excluding bot messages) to maintain better context.
-   - Any images attached to those recent messages are also included in the context.
-   - The bot will respond as Peter Griffin, including describing any images you share
-
+   - **Start a new conversation**: Mention your bot in any channel (e.g., `@PeterGriffinBot What's up?`).
+   - **Continue a conversation**: Simply reply to any of the bot's messages. The bot will use the history from that specific conversation to provide a contextual response.
 ## Installation
 
 ```bash
@@ -81,7 +74,7 @@ npm install
 # Build the TypeScript code
 npm run build
 
-# Start the bot
+# Start the bot (ensure Redis is running locally)
 npm start
 ```
 
@@ -97,79 +90,87 @@ npm run test
 
 ## Docker Deployment
 
+This will start the bot application and a Redis container for storing chat history.
+
 ```bash
 # Build the Docker image
 docker compose build
 
-# Run the container
+# Run the containers in the background
 docker compose up -d
 ```
 
 ## Helm Deployment
 
-This project can be deployed using Helm, a package manager for Kubernetes. The Helm chart is conveniently hosted on the GitHub Actions-generated repository within this project.
-
+The Helm chart includes the application and Redis as a sub-chart, making it a complete deployment solution for Kubernetes.
 ### Installation
 
-1.  Add the repository:
-
+1.  Add the Helm repository:
     ```bash
     helm repo add discord-peter https://nikolayrk.github.io/discord-peter/
     helm repo update
 
 2.  Deploy the chart:
-
     ```bash
     helm install discord-peter discord-peter/discord-peter \
-      --set discordToken=$DISCORD_TOKEN \
-      --set geminiApiKey=$GEMINI_API_KEY
+      --namespace discord-peter \
+      --create-namespace \
+      --set secrets.discordToken=$DISCORD_TOKEN \
+      --set secrets.geminiApiKey=$GEMINI_API_KEY
     ```
-
-    *Replace `$DISCORD_TOKEN` and `$GEMINI_API_KEY` with your actual Discord bot token and Gemini API key.*
+    *Replace `$DISCORD_TOKEN` and `$GEMINI_API_KEY` with your actual secrets.*
 
 ### Configuration
 
-The following table lists the configurable parameters of the `discord-peter` chart and their default values.
+You can override the default values by using the `--set` flag or by providing a custom `values.yaml` file.
+
+**Application Parameters:**
 
 | Parameter                | Description                                          | Default                                        |
 | ------------------------ | ---------------------------------------------------- | ---------------------------------------------- |
 | `replicaCount`           | Number of pod replicas                               | `1`                                            |
 | `image.repository`       | Docker image repository                              | `ghcr.io/nikolayrk/discord-peter`              |
 | `image.tag`              | Docker image tag                                     | `latest`                                       |
-| `image.pullPolicy`       | Docker image pull policy                             | `IfNotPresent`                                 |
-| `nameOverride`           | Override the chart's name                             | `""`                                           |
-| `fullnameOverride`       | Override the chart's full name                       | `""`                                           |
-| `resources.requests.cpu`   | CPU request for the pod                              | `100m`                                         |
-| `resources.requests.memory`| Memory request for the pod                           | `128Mi`                                        |
-| `resources.limits.cpu`     | CPU limit for the pod                                | `200m`                                         |
-| `resources.limits.memory`  | Memory limit for the pod                            | `256Mi`                                        |
 | `config.textModel`       | Gemini model for text generation                     | `"gemini-2.0-flash"`                           |
 | `config.visionModel`     | Gemini model for vision tasks                        | `"gemini-1.5-flash"`                           |
-| `config.defaultProvider` | Default provider for AI tasks                        | `"gemini"`                                     |
+| `config.redisUrl`        | The connection URL for Redis                         | `redis://{{ .Release.Name }}-redis-master:6379`|
 | `secrets.discordToken`    | Discord bot token                                    | `""`                                           |
 | `secrets.geminiApiKey`    | Google Gemini API key                                | `""`                                           |
+| `resources`              | Pod CPU/memory requests and limits                   | (sensible defaults)                            |
 
-You can specify each parameter using the `--set key=value` argument to `helm install`. For example, to specify a different image tag:
 
+**Redis Sub-chart Configuration:**
+
+The chart includes the Bitnami Redis sub-chart. You can enable persistence and configure it to use a pre-existing `StorageClass` (e.g., for an NFS volume).
+
+Example of enabling persistence:
 ```bash
 helm install discord-peter discord-peter/discord-peter \
-  --set image.tag=latest \
-  --set discordToken=$DISCORD_TOKEN \
-  --set geminiApiKey=$GEMINI_API_KEY
+  --namespace discord-peter \
+  --create-namespace \
+  --set secrets.discordToken=$DISCORD_TOKEN \
+  --set secrets.geminiApiKey=$GEMINI_API_KEY \
+  --set redis.master.persistence.enabled=true \
+  --set redis.master.persistence.storageClass=your-storage-class \
+  --set redis.master.persistence.size=1Gi
 ```
+*Replace `your-storage-class` with the name of your `StorageClass`.*
 
-Alternatively, you can provide a YAML file containing the configuration parameters:
+| Redis Parameter                          | Description                               | Default     |
+| ---------------------------------------- | ----------------------------------------- | ----------- |
+| `redis.enabled`                          | Enables or disables the Redis sub-chart   | `true`      |
+| `redis.master.persistence.enabled`       | Enables Redis persistence using a PVC     | `true`      |
+| `redis.master.persistence.storageClass`  | The `StorageClass` to use for the volume  | `""`        |
+| `redis.master.persistence.size`          | The size of the persistent volume         | `1Gi`       |
 
-```bash
-helm install discord-peter discord-peter/discord-peter -f values.yaml
-```
+For a full list of Redis configuration options, refer to the [Bitnami Redis chart documentation](https://github.com/bitnami/charts/tree/main/bitnami/redis).
 
 ### Uninstallation
 
 To uninstall the `discord-peter` deployment:
 
 ```bash
-helm uninstall discord-peter
+helm uninstall discord-peter --namespace discord-peter
 ```
 
 ## Contributing

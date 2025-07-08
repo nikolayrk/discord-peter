@@ -20,7 +20,20 @@ config:
   textModel: "gemini-2.0-flash"
   visionModel: "gemini-1.5-flash"
   defaultProvider: "gemini"
+  redisUrl: "redis://{{ .Release.Name }}-redis-master:6379"
 
 secrets:
   discordToken: ""
   geminiApiKey: ""
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+  replica:
+    persistence:
+      enabled: false
