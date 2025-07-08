@@ -102,6 +102,9 @@ export class GeminiProvider extends BaseAIProvider {
     const responseStream = await this.ai.models.generateContentStream({
       model: this.visionModelName,
       contents: [createUserContent([prompt, ...imageParts])],
+      config: {
+        systemInstruction: config.systemInstructions
+      }
     });
 
     for await (const chunk of responseStream) {
