@@ -1,6 +1,6 @@
 import { BaseAIProvider } from './base';
 import { config } from '../../config/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI, createUserContent } from '@google/genai';
 import { logger } from '../../utils/logger';
 import { AIRequestParams } from '../types';
 
@@ -13,8 +13,9 @@ interface ImageData {
 
 export class GeminiProvider extends BaseAIProvider {
   private apiKey: string;
-  private textModel: any;
-  private visionModel: any;
+  private ai!: GoogleGenAI;
+  private textModelName!: string;
+  private visionModelName!: string;
 
   constructor() {
     super();
@@ -23,16 +24,13 @@ export class GeminiProvider extends BaseAIProvider {
   }
 
   private initializeModels(): void {
-    const genAI = new GoogleGenerativeAI(this.apiKey);
+    this.ai = new GoogleGenAI({ apiKey: this.apiKey });
     
-    const textModelName = config.ai.textModel;
-    const visionModelName = config.ai.visionModel;
+    this.textModelName = config.ai.textModel;
+    this.visionModelName = config.ai.visionModel;
     
-    logger.info('Initializing text model:', textModelName);
-    logger.info('Initializing vision model:', visionModelName);
-    
-    this.textModel = genAI.getGenerativeModel({ model: textModelName });
-    this.visionModel = genAI.getGenerativeModel({ model: visionModelName });
+    logger.info('Initializing Gemini with text model:', this.textModelName);
+    logger.info('Initializing Gemini with vision model:', this.visionModelName);
   }
   
   async generateResponse(params: AIRequestParams): Promise<string> {
@@ -55,17 +53,22 @@ export class GeminiProvider extends BaseAIProvider {
   }
 
   private async generateTextResponse(prompt: string): Promise<string> {
-    const result = await this.textModel.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const response = await this.ai.models.generateContent({
+      model: this.textModelName,
+      contents: prompt,
+    });
+    return response.text ?? 'Empty text model response';
   }
 
   private async generateVisionResponse(prompt: string, images: string[]): Promise<string> {
     logger.info(`Processing ${images.length} images with prompt`);
     const imageParts = await this.processImages(images);
-    const result = await this.visionModel.generateContent([prompt, ...imageParts]);
-    const response = await result.response;
-    return response.text();
+    
+    const response = await this.ai.models.generateContent({
+      model: this.visionModelName,
+      contents: [createUserContent([prompt, ...imageParts])],
+    });
+    return response.text ?? 'Empty vision model response';
   }
 
   private async processImages(images: string[]): Promise<ImageData[]> {
