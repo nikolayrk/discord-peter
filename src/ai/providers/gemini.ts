@@ -12,25 +12,37 @@ interface ImageData {
 }
 
 export class GeminiProvider extends BaseAIProvider {
-  private apiKey: string;
   private ai!: GoogleGenAI;
   private textModelName!: string;
   private visionModelName!: string;
 
   constructor() {
     super();
-    this.apiKey = config.ai.geminiApiKey;
-    this.initializeModels();
+    
+    const {
+      ai,
+      textModelName,
+      visionModelName
+    } = this.initializeModels(config.ai.geminiApiKey);
+
+    this.ai = ai;
+    this.textModelName = textModelName;
+    this.visionModelName = visionModelName;
   }
 
-  private initializeModels(): void {
-    this.ai = new GoogleGenAI({ apiKey: this.apiKey });
+  private initializeModels(apiKey: string): {
+    ai: GoogleGenAI,
+    textModelName: string,
+    visionModelName: string } {
+    const ai = new GoogleGenAI({ apiKey });
     
-    this.textModelName = config.ai.textModel;
-    this.visionModelName = config.ai.visionModel;
+    const textModelName = config.ai.textModel;
+    const visionModelName = config.ai.visionModel;
     
-    logger.info('Initializing Gemini with text model:', this.textModelName);
-    logger.info('Initializing Gemini with vision model:', this.visionModelName);
+    logger.info('Using Gemini with text model:', textModelName);
+    logger.info('Using Gemini with vision model:', visionModelName);
+
+    return { ai, textModelName, visionModelName };
   }
   
   async generateResponse(params: AIRequestParams): Promise<string> {
@@ -39,6 +51,63 @@ export class GeminiProvider extends BaseAIProvider {
     } catch (error) {
       logger.error('Gemini API error:', error);
       throw new Error(this.formatError(error));
+    }
+  }
+
+  async generateStreamingResponse(
+    params: AIRequestParams,
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
+    try {
+      const { prompt, images } = params;
+      
+      if (!images || images.length === 0) {
+        await this.generateTextStream(prompt, onChunk);
+      } else {
+        await this.generateVisionStream(prompt, images, onChunk);
+      }
+    } catch (error) {
+      logger.error('Gemini API streaming error:', error);
+      throw new Error(this.formatError(error));
+    }
+  }
+
+  private async generateTextStream(
+    prompt: string,
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
+    const responseStream = await this.ai.models.generateContentStream({
+      model: this.textModelName,
+      contents: prompt,
+      config: {
+        systemInstruction: config.systemInstructions
+      }
+    });
+
+    for await (const chunk of responseStream) {
+      if (chunk.text) {
+        onChunk(chunk.text);
+      }
+    }
+  }
+
+  private async generateVisionStream(
+    prompt: string,
+    images: string[],
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
+    logger.info(`Processing ${images.length} images with prompt for streaming`);
+    const imageParts = await this.processImages(images);
+
+    const responseStream = await this.ai.models.generateContentStream({
+      model: this.visionModelName,
+      contents: [createUserContent([prompt, ...imageParts])],
+    });
+
+    for await (const chunk of responseStream) {
+      if (chunk.text) {
+        onChunk(chunk.text);
+      }
     }
   }
 

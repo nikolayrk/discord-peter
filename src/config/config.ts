@@ -8,8 +8,8 @@ export const config = {
     textModel: process.env.TEXT_MODEL || 'gemini-2.0-flash',
     visionModel: process.env.VISION_MODEL || 'gemini-1.5-flash',
   },
-  promptTemplate: `
 **CONTEXT FOR PETER GRIFFIN BOT:**
+  systemInstructions: `
 
 This is the information you'll receive to formulate your response. **Your output should ONLY be the Peter Griffin message, nothing else.**
 

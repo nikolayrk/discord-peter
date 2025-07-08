@@ -2,14 +2,14 @@ import { Message, Attachment, Collection } from 'discord.js';
 import { AIService } from '../ai/aiService';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
+
 export class MessageHandler {
   private aiService: AIService;
-  private readonly BASE_DELAY = 500;
-  private readonly CHARS_PER_SECOND = 20;
   private readonly RANDOM_RESPONSE_CHANCE = 0.01; // 1% chance for a response to an unprompted message
   private readonly CONTEXT_LAST_MESSAGES_IN_MINS = 10; // context messages from the last 10 minutes
   private readonly CONTEXT_LAST_MESSAGE_OLDEST_HOURS = 24; // context the last message if within 24 hours
   private readonly MAX_CONTEXT_LAST_MESSAGES = 50;
+  private readonly STREAM_EDIT_INTERVAL = 200;
 
   constructor() {
     this.aiService = new AIService(config.ai.defaultProvider);
@@ -20,14 +20,52 @@ export class MessageHandler {
       if (this.shouldSkipMessage(message)) return;
 
       const { prompt, images } = await this.buildPrompt(message);
-      const response = await this.getAIResponse(prompt, images);
-      await this.sendResponseMessages(message, response);
+      
+      await this.streamResponseToChannel(message, prompt, images);
 
-      logger.info('Finished sending all messages');
+      logger.info('Finished handling message and streaming response.');
     } catch (error) {
       logger.error('Error handling message:', error);
       await message.reply('Hehehe, sorry folks, I had a bit of a malfunction there!');
     }
+  }
+
+  private async streamResponseToChannel(message: Message, prompt: string, images: string[]): Promise<void> {
+    const replyMessage = await message.reply({ 
+      content: `Nyehehehehe... alright, I'm workin' on it!`, 
+      allowedMentions: { parse: [] } 
+    });
+
+    let fullResponseText = '';
+    let lastEditTime = 0;
+    let editQueue = '';
+
+    const onChunk = (chunk: string) => {
+      editQueue += chunk;
+      const now = Date.now();
+      
+      if (now - lastEditTime > this.STREAM_EDIT_INTERVAL) {
+        fullResponseText += editQueue;
+        editQueue = '';
+        
+        replyMessage.edit(fullResponseText).catch(err => logger.error("Error editing message:", err));
+        lastEditTime = now;
+      }
+    };
+    
+    await this.aiService.generateStreamingResponse(
+      { prompt, images },
+      onChunk
+    );
+
+    fullResponseText += editQueue;
+    if (fullResponseText.length === 0) {
+      fullResponseText = "Heh. Yeah, I got nothin'.";
+    }
+    
+    logger.info('Full AI response received:', fullResponseText);
+    
+    await replyMessage.edit(fullResponseText);
   }
 
   private shouldSkipMessage(message: Message): boolean {
@@ -136,66 +174,12 @@ export class MessageHandler {
       .trim();
   }
 
-  private async getAIResponse(prompt: string, images: string[]): Promise<string> {
-    const response = await this.aiService.generateResponse({
-      prompt: config.promptTemplate.replace('{message}', prompt),
-      images
-    });
-    logger.info('Received AI response:', response);
-    return response;
-  }
-
-  private async sendResponseMessages(message: Message, response: string): Promise<void> {
-    const paragraphs = this.splitIntoParagraphs(response);
-    logger.info(`Preparing to send ${paragraphs.length} messages`);
-
-    await paragraphs.reduce(async (promise, paragraph, index) => {
-      await promise;
-      await this.sendSingleMessage(message, paragraph, index === 0);
-    }, Promise.resolve());
-  }
-
-  private splitIntoParagraphs(text: string): string[] {
-    return text
-      .split('\n')
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
-  }
-
-  private async sendSingleMessage(message: Message, content: string, isFirstMessage: boolean): Promise<void> {
-    const readingTime = this.calculateReadingTime(content);
-    logger.debug(`Waiting ${readingTime}ms before sending message`);
-    await this.delay(readingTime);
-
-    if (isFirstMessage) {
-      logger.info(`Sending first message as reply: "${content}"`);
-      await message.reply({ content, allowedMentions: { parse: [] } });
-      return;
-    }
-
-    if ('send' in message.channel) {
-      logger.info(`Sending follow-up message: "${content}"`);
-      await message.channel.send({ content, allowedMentions: { parse: [] } });
-    }
-  }
-
-  private calculateReadingTime(content: string): number {
-    return Math.max(
-      this.BASE_DELAY,
-      (content.length / this.CHARS_PER_SECOND) * 1000
-    );
-  }
-
   private shouldRespond(message: Message): boolean {
     const isRandomResponse = Math.random() < this.RANDOM_RESPONSE_CHANCE;
     const shouldRespond = message.mentions.has(message.client.user!) || isRandomResponse;
     const reason = message.mentions.has(message.client.user!) ? 'mention' : (isRandomResponse ? 'random' : 'no');
     logger.debug(`Message ${shouldRespond ? 'requires' : 'does not require'} response due to ${reason}`);
     return shouldRespond;
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private async getRecentMessages(message: Message): Promise<Message[]> {

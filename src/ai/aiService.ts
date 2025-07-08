@@ -20,4 +20,11 @@ export class AIService {
   async generateResponse(params: AIRequestParams): Promise<string> {
     return this.provider.generateResponse(params);
   }
+
+  async generateStreamingResponse(
+    params: AIRequestParams,
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
+    return this.provider.generateStreamingResponse(params, onChunk);
+  }
 }
