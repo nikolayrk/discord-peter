@@ -50,6 +50,7 @@ jobs:
     needs: build-image
     uses: ./.github/workflows/test-chart.yml
     with:
+      ref: ${{ github.event.pull_request.head.sha }}
       tag: pr-${{ github.event.pull_request.number }}
 
   bump-version:
