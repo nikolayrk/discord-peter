@@ -6,7 +6,7 @@ on:
     paths-ignore:
       - '**/README.md'
       - '**/charts/**/Chart.yaml' # Don't run on version bump commits
-      - '.github/**'
+      # - '.github/**'
     
 concurrency:
   group: "cicd"
