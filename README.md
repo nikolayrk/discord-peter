@@ -3,23 +3,22 @@
 </p>
 
 # Discord Peter
-Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some fancy AI thing from Google (way smarter than me after that time I hit my head at the Clam), I'll chat with ya, look at your pictures, and keep the conversation going just like the real deal!
+Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some fancy AI thing from Google, I'll chat with ya, look at your pictures, and even explain complicated stuff with my own... unique... analogies, just like on the show!
 
 ## Features
 
 - Starts new conversations when you mention (`@`) the bot
 - Maintains long-term conversational context when you reply to its messages
+- Explains concepts using Peter Griffin's "cutaway gag" style while keeping the core facts accurate
 - Uses Redis to store and retrieve chat histories
-- Understands and describes images shared in new messages and replies
-- Uses Google's Gemini AI for natural language generation
-- Has a 1% chance of responding to any message, even without a mention
-- Natural typing simulation for responses
+- Understands and describes images shared in chat
+- Shows a "typing..." indicator while generating responses
 - Containerized for easy deployment with Docker
 - Includes a Helm chart for easy and configurable deployment to Kubernetes
 
 ## Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v24 or higher)
 - npm
 - Discord Bot Token
 - Google Gemini API Key
@@ -27,6 +26,7 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Docker (optional)
 - Kubernetes cluster (optional)
 - Helm (optional)
+- An NFS CSI Driver installed in your cluster (optional, for persistence)
 
 ## Environment Variables
 
@@ -42,8 +42,8 @@ VISION_MODEL=your_vision_model_name
 ```
 
 Default values if not specified:
-- `TEXT_MODEL`: "gemini-2.0-flash"
-- `VISION_MODEL`: "gemini-1.5-flash"
+- `TEXT_MODEL`: "gemini-2.5-pro"
+- `VISION_MODEL`: "gemini-2.5-pro"
 - `REDIS_URL`: The bot will use `redis://redis:6379` when running inside Docker Compose.
 
 ## Bot Usage
@@ -62,8 +62,9 @@ Default values if not specified:
      - Send Messages
      - Read Message History
    - Generate the invite URL, open it, and authorize it for your server
+
 3. Start chatting:
-   - **Start a new conversation**: Mention your bot in any channel (e.g., `@PeterGriffinBot What's up?`).
+   - **Start a new conversation**: Mention your bot in any channel (e.g., `@PeterGriffinBot What's Kubernetes?`).
    - **Continue a conversation**: Simply reply to any of the bot's messages. The bot will use the history from that specific conversation to provide a contextual response.
 ## Installation
 
@@ -103,6 +104,7 @@ docker compose up -d
 ## Helm Deployment
 
 The Helm chart includes the application and Redis as a sub-chart, making it a complete deployment solution for Kubernetes.
+
 ### Installation
 
 1.  Add the Helm repository:
@@ -131,19 +133,20 @@ You can override the default values by using the `--set` flag or by providing a 
 | `replicaCount`           | Number of pod replicas                               | `1`                                            |
 | `image.repository`       | Docker image repository                              | `ghcr.io/nikolayrk/discord-peter`              |
 | `image.tag`              | Docker image tag                                     | `latest`                                       |
-| `config.textModel`       | Gemini model for text generation                     | `"gemini-2.0-flash"`                           |
-| `config.visionModel`     | Gemini model for vision tasks                        | `"gemini-1.5-flash"`                           |
-| `config.redisUrl`        | The connection URL for Redis                         | `redis://{{ .Release.Name }}-redis-master:6379`|
+| `config.textModel`       | Gemini model for text generation                     | `"gemini-2.5-pro"`                           |
+| `config.visionModel`     | Gemini model for vision tasks                        | `"gemini-2.5-pro"`                           |
 | `secrets.discordToken`    | Discord bot token                                    | `""`                                           |
 | `secrets.geminiApiKey`    | Google Gemini API key                                | `""`                                           |
 | `resources`              | Pod CPU/memory requests and limits                   | (sensible defaults)                            |
 
+**Redis Sub-chart Persistence Configuration:**
 
-**Redis Sub-chart Configuration:**
+The chart includes the Bitnami Redis sub-chart. To enable persistence on an NFS share, your Kubernetes cluster must have an NFS CSI driver installed and a corresponding `StorageClass` created.
 
-The chart includes the Bitnami Redis sub-chart. You can enable persistence and configure it to use a pre-existing `StorageClass` (e.g., for an NFS volume).
+**Example for enabling persistence on an NFS share:**
 
-Example of enabling persistence:
+This example assumes you have an NFS server, a `StorageClass` named `your-nfs-class`, and a dedicated directory `/path/on/nfs/peter-redis` on your share.
+
 ```bash
 helm install discord-peter discord-peter/discord-peter \
   --namespace discord-peter \
@@ -152,16 +155,19 @@ helm install discord-peter discord-peter/discord-peter \
   --set secrets.geminiApiKey=$GEMINI_API_KEY \
   --set redis.master.persistence.enabled=true \
   --set redis.master.persistence.storageClass=your-storage-class \
+  --set redis.master.persistence.subPath=peter-redis \
+  --set redis.master.volumePermissions.enabled=true \
   --set redis.master.persistence.size=1Gi
 ```
-*Replace `your-storage-class` with the name of your `StorageClass`.*
 
-| Redis Parameter                          | Description                               | Default     |
-| ---------------------------------------- | ----------------------------------------- | ----------- |
-| `redis.enabled`                          | Enables or disables the Redis sub-chart   | `true`      |
-| `redis.master.persistence.enabled`       | Enables Redis persistence using a PVC     | `true`      |
-| `redis.master.persistence.storageClass`  | The `StorageClass` to use for the volume  | `""`        |
-| `redis.master.persistence.size`          | The size of the persistent volume         | `1Gi`       |
+| Redis Parameter                          | Description                                                               | Default     |
+| ---------------------------------------- | ------------------------------------------------------------------------- | ----------- |
+| `redis.enabled`                          | Enables or disables the Redis sub-chart                                   | `true`      |
+| `redis.master.persistence.enabled`       | Enables Redis persistence using a PVC                                     | `true`      |
+| `redis.master.persistence.storageClass`  | The `StorageClass` to use for the volume                                  | `""`        |
+| `redis.master.persistence.size`          | The size of the persistent volume                                         | `1Gi`       |
+| `redis.master.persistence.subPath`       | Mount a subdirectory of the volume instead of its root (e.g., `redis-data`)| `""`        |
+| `redis.master.volumePermissions.enabled` | Enables an init container to fix file permissions on the volume           | `false`     |
 
 For a full list of Redis configuration options, refer to the [Bitnami Redis chart documentation](https://github.com/bitnami/charts/tree/main/bitnami/redis).
 

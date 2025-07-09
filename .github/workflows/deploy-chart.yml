@@ -11,6 +11,9 @@ on:
         required: true
       REDIS_STORAGE_CLASS:
         required: true
+      REDIS_SUBPATH:
+        required: false
+
 jobs:
   deploy-chart:
     runs-on: ubuntu-latest
@@ -28,8 +31,13 @@ jobs:
     - name: Deploy
       run: |
         echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-
         export KUBECONFIG=$(pwd)/kubeconfig.yaml
+
+        SUBPATH_ARG=""
+        if [[ -n "${{ secrets.REDIS_SUBPATH }}" ]]; then
+          SUBPATH_ARG="--set redis.master.persistence.subPath=${{ secrets.REDIS_SUBPATH }}"
+        fi
+
         helm upgrade --install discord-peter ./charts/discord-peter \
           --namespace discord-peter \
           --create-namespace \
@@ -39,4 +47,6 @@ jobs:
           --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
           --set redis.master.persistence.enabled=true \
           --set redis.master.persistence.storageClass=${{ secrets.REDIS_STORAGE_CLASS }} \
-          --set redis.master.persistence.size=1Gi
+          --set redis.master.persistence.size=1Gi \
+          --set redis.master.volumePermissions.enabled=true \
+          $SUBPATH_ARG
