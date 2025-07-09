@@ -1,4 +1,4 @@
-import { Message, Attachment, Collection } from 'discord.js';
+import { Message, Attachment, TextChannel } from 'discord.js';
 import { AIService } from '../ai/aiService';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
@@ -36,64 +36,82 @@ export class MessageHandler {
     let lastEditTime = 0;
     let editQueue = '';
     let isCreatingMessage = false;
+    let typingInterval: NodeJS.Timeout | null = null;
 
-    const onChunk = async (chunk: string) => {
-      fullResponseText += chunk;
-      editQueue += chunk;
-      const now = Date.now();
-
-      if (!replyMessage && !isCreatingMessage) {
-        isCreatingMessage = true;
-        try {
-          const initialContent = editQueue;
-          replyMessage = await message.reply({
-            content: initialContent,
-            allowedMentions: { parse: [] }
-          });
-          editQueue = editQueue.substring(initialContent.length);
-          lastEditTime = now;
-        } catch (err) {
-          logger.error("Error sending initial reply:", err);
-          isCreatingMessage = false;
-        }
-        return;
+    try {
+      if (message.channel.partial) {
+        await message.channel.fetch();
       }
 
-      if (replyMessage && now - lastEditTime > this.STREAM_EDIT_INTERVAL) {
-        if (editQueue.length > 0) {
+      if (message.channel.isTextBased()) {
+        (message.channel as TextChannel).sendTyping();
+        typingInterval = setInterval(() => {
+          (message.channel as TextChannel).sendTyping();
+      }, 9000);
+      }
+
+      const onChunk = async (chunk: string) => {
+        fullResponseText += chunk;
+        editQueue += chunk;
+        const now = Date.now();
+
+        if (!replyMessage && !isCreatingMessage) {
+          isCreatingMessage = true;
           try {
-            await replyMessage.edit(fullResponseText);
-            editQueue = '';
+            const initialContent = editQueue;
+            replyMessage = await message.reply({
+              content: initialContent,
+              allowedMentions: { parse: [] }
+            });
+            editQueue = editQueue.substring(initialContent.length);
             lastEditTime = now;
           } catch (err) {
-            logger.error("Error editing message:", err);
+            logger.error("Error sending initial reply:", err);
+            isCreatingMessage = false;
+          }
+          return;
+        }
+
+        if (replyMessage && now - lastEditTime > this.STREAM_EDIT_INTERVAL) {
+          if (editQueue.length > 0) {
+            try {
+              await replyMessage.edit(fullResponseText);
+              editQueue = '';
+              lastEditTime = now;
+            } catch (err) {
+              logger.error("Error editing message:", err);
+            }
           }
         }
+      };
+
+      await this.aiService.generateStreamingResponse(
+        { prompt, images, history },
+        onChunk
+      );
+
+      if (!replyMessage) {
+        if (fullResponseText.length > 0) {
+          try {
+            replyMessage = await message.reply({ content: fullResponseText, allowedMentions: { parse: [] } });
+          } catch(err) { logger.error("Error sending final fast reply:", err); }
+        } else {
+          try {
+            replyMessage = await message.reply({ content: "Heh. Yeah, I got nothin'.", allowedMentions: { parse: [] } });
+          } catch (err) { logger.error("Error sending empty response message:", err); }
+        }
       }
-    };
-
-    await this.aiService.generateStreamingResponse(
-      { prompt, images, history },
-      onChunk
-    );
-
-    if (!replyMessage) {
-      if (fullResponseText.length > 0) {
-        try {
-          replyMessage = await message.reply({ content: fullResponseText, allowedMentions: { parse: [] } });
-        } catch(err) { logger.error("Error sending final fast reply:", err); }
+      if (replyMessage) {
+        logger.info('Full AI response received:', fullResponseText);
+        await this.saveChatHistory(replyMessage.id, prompt, fullResponseText);
       } else {
-        try {
-          replyMessage = await message.reply({ content: "Heh. Yeah, I got nothin'.", allowedMentions: { parse: [] } });
-        } catch (err) { logger.error("Error sending empty response message:", err); }
+        logger.error("Failed to create or edit a reply message, cannot save chat history.");
       }
-    }
-
-    if (replyMessage) {
-      logger.info('Full AI response received:', fullResponseText);
-      await this.saveChatHistory(replyMessage.id, prompt, fullResponseText);
-    } else {
-      logger.error("Failed to create or edit a reply message, cannot save chat history.");
+    } finally {
+      // Ensure the typing indicator is always stopped
+      if (typingInterval) {
+        clearInterval(typingInterval);
+      }
     }
   }
 
