@@ -145,7 +145,7 @@ The chart includes the Bitnami Redis sub-chart. To enable persistence on an NFS 
 
 **Example for enabling persistence on an NFS share:**
 
-This example assumes you have an NFS server, a `StorageClass` named `your-nfs-class`, and a dedicated directory `/path/on/nfs/peter-redis` on your share.
+This example assumes you have an NFS server, a `StorageClass` named `your-storage-class`, and a dedicated directory `/path/on/nfs/peter-redis` on your share.
 
 ```bash
 helm install discord-peter discord-peter/discord-peter \
