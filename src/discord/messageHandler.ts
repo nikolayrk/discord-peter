@@ -37,17 +37,14 @@ export class MessageHandler {
     let editQueue = '';
     let isCreatingMessage = false;
     let typingInterval: NodeJS.Timeout | null = null;
+    let messageCreationPromise: Promise<void> | null = null;
 
     try {
-      if (message.channel.partial) {
-        await message.channel.fetch();
-      }
-
       if (message.channel.isTextBased()) {
         (message.channel as TextChannel).sendTyping();
         typingInterval = setInterval(() => {
           (message.channel as TextChannel).sendTyping();
-      }, 9000);
+        }, 9000);
       }
 
       const onChunk = async (chunk: string) => {
@@ -57,18 +54,18 @@ export class MessageHandler {
 
         if (!replyMessage && !isCreatingMessage) {
           isCreatingMessage = true;
-          try {
-            const initialContent = editQueue;
-            replyMessage = await message.reply({
-              content: initialContent,
-              allowedMentions: { parse: [] }
-            });
-            editQueue = editQueue.substring(initialContent.length);
+
+          messageCreationPromise = message.reply({
+            content: editQueue,
+            allowedMentions: { parse: [] }
+          }).then(msg => {
+            replyMessage = msg;
+            editQueue = '';
             lastEditTime = now;
-          } catch (err) {
+          }).catch(err => {
             logger.error("Error sending initial reply:", err);
             isCreatingMessage = false;
-          }
+          });
           return;
         }
 
@@ -90,11 +87,15 @@ export class MessageHandler {
         onChunk
       );
 
+      if (messageCreationPromise) {
+        await messageCreationPromise;
+      }
+
       if (!replyMessage) {
         if (fullResponseText.length > 0) {
           try {
             replyMessage = await message.reply({ content: fullResponseText, allowedMentions: { parse: [] } });
-          } catch(err) { logger.error("Error sending final fast reply:", err); }
+          } catch (err) { logger.error("Error sending final fast reply:", err); }
         } else {
           try {
             replyMessage = await message.reply({ content: "Heh. Yeah, I got nothin'.", allowedMentions: { parse: [] } });
