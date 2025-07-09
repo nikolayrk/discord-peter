@@ -1,0 +1,37 @@
+name: Bump Chart Version
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+    secrets:
+      GH_TOKEN:
+        required: true
+
+jobs:
+  bump-chart-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Get current chart version
+        run: |
+          CHART_VERSION=$(yq e '.version' charts/discord-peter/Chart.yaml)
+          echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
+
+      - name: Bump version
+        id: bump
+        uses: callowayproject/bump-my-version@master
+        with:
+          args: "patch --current-version=${{ env.CHART_VERSION }}"
+          github-token: ${{ secrets.GH_TOKEN }}

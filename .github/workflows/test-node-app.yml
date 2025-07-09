@@ -1,0 +1,32 @@
+name: Test Node App
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+
+jobs:
+  test-node-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run tests
+        run: npm test

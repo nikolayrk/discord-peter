@@ -2,9 +2,16 @@ name: Build and Push Docker Image
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      tag:
+        type: string
+        required: true
 
 jobs:
-  build-image:
+  build-docker-image:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -25,9 +32,9 @@ jobs:
         platforms: linux/arm64/v8
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}:${{ github.sha }}
-          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:${{ inputs.ref }}
+          ghcr.io/${{ github.repository }}:${{ inputs.tag }}
         build-args: |
-          VERSION=${{ github.sha }}
+          VERSION=${{ inputs.ref }}
         cache-from: type=gha
         cache-to: type=gha,mode=max

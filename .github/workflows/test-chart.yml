@@ -2,6 +2,10 @@ name: Test Helm Chart
 
 on:
   workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 jobs:
   test-chart:
@@ -30,6 +34,6 @@ jobs:
             --target-branch ${{ github.sha }} \
             --helm-extra-set-args "\
               --set=image.repository=ghcr.io/${{ github.repository }} \
-              --set=image.tag=${{ github.sha }} \
+              --set=image.tag=${{ inputs.tag }} \
               --set=secrets.discordToken=test-token \
               --set=secrets.geminiApiKey=test-key"

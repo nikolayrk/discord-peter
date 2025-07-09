@@ -22,23 +22,6 @@ jobs:
       - name: Add Helm repositories
         run: helm repo add bitnami https://charts.bitnami.com/bitnami
 
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Get current chart version
-        run: |
-          CHART_VERSION=$(yq e '.version' charts/discord-peter/Chart.yaml)
-          echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
-
-      - name: Bump version
-        id: bump
-        uses: callowayproject/bump-my-version@master
-        with:
-          args: "patch --current-version=${{ env.CHART_VERSION }}"
-          github-token: ${{ secrets.GH_TOKEN }}
-
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
