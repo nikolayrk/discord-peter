@@ -7,7 +7,7 @@ on:
       - 'package-lock.json'
       - 'Dockerfile'
       - '**/.github/**/*.yml'
-      - '**/charts/*'
+      - 'charts/**'
 
 permissions:
   contents: write
