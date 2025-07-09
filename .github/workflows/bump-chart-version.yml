@@ -35,3 +35,4 @@ jobs:
         with:
           args: "patch --current-version=${{ env.CHART_VERSION }}"
           github-token: ${{ secrets.GH_TOKEN }}
+          branch: ${{ inputs.ref }}
