@@ -24,23 +24,17 @@ jobs:
     with:
       ref: ${{ github.head_ref }}
 
-  delete-image:
+  purge-old-image:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
     steps:
-      - name: Delete existing image with same tag
-        uses: actions/delete-package-versions@v5
+      - uses: chipkent/action-cleanup-package@v1.0.1
         with:
           package-name: ${{ github.event.repository.name }}
-          package-type: 'container'
-          owner: ${{ github.repository_owner }}
-          ignore-versions: '^(?!pr-\d+$).*\d+\.\d+\.\d+$' # Ignore 1.0.5 but not pr-15
-          num-old-versions-to-delete: 1
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: pr-${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GH_TOKEN }}
 
   build-image:
-    needs: [test-app, delete-image]
+    needs: [test-app, purge-old-image]
     uses: ./.github/workflows/build-image.yml
     with:
       ref: ${{ github.event.pull_request.head.sha }}
