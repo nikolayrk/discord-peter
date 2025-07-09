@@ -31,25 +31,44 @@ export class MessageHandler {
   }
 
   private async streamResponseToChannel(message: Message, prompt: string, images: string[], history: Content[]): Promise<void> {
-    const replyMessage = await message.reply({
-      content: `Nyehehehehe... alright, I'm workin' on it!`,
-      allowedMentions: { parse: [] }
-    });
-
+    let replyMessage: Message | null = null;
     let fullResponseText = '';
     let lastEditTime = 0;
     let editQueue = '';
+    let isCreatingMessage = false;
 
-    const onChunk = (chunk: string) => {
+    const onChunk = async (chunk: string) => {
+      fullResponseText += chunk;
       editQueue += chunk;
       const now = Date.now();
 
-      if (now - lastEditTime > this.STREAM_EDIT_INTERVAL) {
-        fullResponseText += editQueue;
-        editQueue = '';
+      if (!replyMessage && !isCreatingMessage) {
+        isCreatingMessage = true;
+        try {
+          const initialContent = editQueue;
+          replyMessage = await message.reply({
+            content: initialContent,
+            allowedMentions: { parse: [] }
+          });
+          editQueue = editQueue.substring(initialContent.length);
+          lastEditTime = now;
+        } catch (err) {
+          logger.error("Error sending initial reply:", err);
+          isCreatingMessage = false;
+        }
+        return;
+      }
 
-        replyMessage.edit(fullResponseText).catch(err => logger.error("Error editing message:", err));
-        lastEditTime = now;
+      if (replyMessage && now - lastEditTime > this.STREAM_EDIT_INTERVAL) {
+        if (editQueue.length > 0) {
+          try {
+            await replyMessage.edit(fullResponseText);
+            editQueue = '';
+            lastEditTime = now;
+          } catch (err) {
+            logger.error("Error editing message:", err);
+          }
+        }
       }
     };
 
@@ -58,14 +77,24 @@ export class MessageHandler {
       onChunk
     );
 
-    fullResponseText += editQueue;
-    if (fullResponseText.length === 0) {
-      fullResponseText = "Heh. Yeah, I got nothin'.";
+    if (!replyMessage) {
+      if (fullResponseText.length > 0) {
+        try {
+          replyMessage = await message.reply({ content: fullResponseText, allowedMentions: { parse: [] } });
+        } catch(err) { logger.error("Error sending final fast reply:", err); }
+      } else {
+        try {
+          replyMessage = await message.reply({ content: "Heh. Yeah, I got nothin'.", allowedMentions: { parse: [] } });
+        } catch (err) { logger.error("Error sending empty response message:", err); }
+      }
     }
 
-    logger.info('Full AI response received:', fullResponseText);
-    await replyMessage.edit(fullResponseText);
-    await this.saveChatHistory(replyMessage.id, prompt, fullResponseText);
+    if (replyMessage) {
+      logger.info('Full AI response received:', fullResponseText);
+      await this.saveChatHistory(replyMessage.id, prompt, fullResponseText);
+    } else {
+      logger.error("Failed to create or edit a reply message, cannot save chat history.");
+    }
   }
 
   private shouldSkipMessage(message: Message): boolean {
