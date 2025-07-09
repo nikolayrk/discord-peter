@@ -1,5 +1,19 @@
 import { Content } from '@google/genai';
 
+export interface ImageData {
+  inlineData: {
+    data: string;
+    mimeType: string;
+  };
+}
+
+export class ModelOverloadedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ModelOverloadedError';
+  }
+}
+
 export interface AIRequestParams {
   prompt: string;
   images?: string[];

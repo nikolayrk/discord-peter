@@ -4,6 +4,7 @@ import { config } from '../config/config';
 import { logger } from '../utils/logger';
 import { redisClient } from '../utils/redisClient';
 import { Content } from '@google/genai';
+import { ModelOverloadedError } from '../ai/types';
 
 export class MessageHandler {
   private aiService: AIService;
@@ -26,7 +27,11 @@ export class MessageHandler {
       logger.info('Finished handling message and streaming response.');
     } catch (error) {
       logger.error('Error handling message:', error);
-      await message.reply('Hehehe, sorry folks, I had a bit of a malfunction there!');
+      if (error instanceof ModelOverloadedError) {
+        await message.reply("Whoa, hold your horses! My brain's a little fried from all you jabronis askin' questions. Try again in a minute, heheh.");
+      } else {
+        await message.reply('Hehehe, sorry folks, I had a bit of a malfunction there!');
+      }
     }
   }
 

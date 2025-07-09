@@ -2,27 +2,7 @@ import { BaseAIProvider } from './base';
 import { config } from '../../config/config';
 import { GoogleGenAI } from '@google/genai';
 import { logger } from '../../utils/logger';
-import { AIRequestParams } from '../types';
-
-interface ImageData {
-  inlineData: {
-    data: string;
-    mimeType: string;
-  };
-}
-
-function createUserContent(parts: any[]) {
-  return {
-    role: 'user',
-    parts: parts.map(part => {
-      if (typeof part === 'string') {
-        return { text: part };
-      } else {
-        return part;
-      }
-    })
-  };
-}
+import { AIRequestParams, ModelOverloadedError, ImageData } from '../types';
 
 export class GeminiProvider extends BaseAIProvider {
   private ai!: GoogleGenAI;
@@ -112,7 +92,11 @@ export class GeminiProvider extends BaseAIProvider {
     }
     } catch (error) {
       logger.error('Gemini API streaming error:', error);
-      throw new Error(this.formatError(error));
+      const errorMessage = this.formatError(error);
+      if (errorMessage.includes('503') && (errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE'))) {
+        throw new ModelOverloadedError('The model is currently overloaded.');
+      }
+      throw new Error(errorMessage);
   }
   }
 
