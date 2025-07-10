@@ -32,9 +32,7 @@ jobs:
         run: |
           TAG="pr-${{ github.event.pull_request.number }}"
           echo "Checking for tag: $TAG"
-          echo "$GITHUB_TOKEN" | gh auth login --with-token
-          echo "Authenticated with gh CLI"
-          IMAGES=$(gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG" || true)
+          IMAGES=$(gh api "GET /users/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[.metadata.container.tags[]" | grep "$TAG" || true)
           echo "Images found: $IMAGES"
           if [ -n "$IMAGES" ]; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
@@ -80,7 +78,7 @@ jobs:
       - name: Retag image
         run: |
           docker login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GITHUB_TOKEN }}
-          docker pull ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+          docker pull --platform linux/arm64 ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
           docker tag ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} ghcr.io/${{ github.repository }}:latest
           docker push ghcr.io/${{ github.repository }}:latest
 
