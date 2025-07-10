@@ -40,13 +40,17 @@ jobs:
         id: bump
         shell: bash
         run: |
-          echo "previous-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
+          echo "PREVIOUS_VERSION=$(bump-my-version show current_version)" >> $GITHUB_ENV
           bump-my-version bump patch --current-version=${{ env.CHART_VERSION }}
-          ([[ $? -gt 0 ]] && echo "bumped=false" || echo "bumped=true") >> $GITHUB_OUTPUT
-          echo "current-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
+          if [[ $? -gt 0 ]]; then
+            echo "BUMPED=false" >> $GITHUB_ENV
+          else
+            echo "BUMPED=true" >> $GITHUB_ENV
+          fi
+          echo "CURRENT_VERSION=$(bump-my-version show current_version)" >> $GITHUB_ENV
 
       - name: Commit and push changes
         run: |
           git add charts/discord-peter/Chart.yaml
-          git commit -m "Bump chart version to ${{ steps.bump.outputs.current-version }}"
+          git commit -m "Bump version: ${{ env.PREVIOUS_VERSION }} → ${{ env.CURRENT_VERSION }} [skip ci]"
           git push origin ${{ inputs.ref }}
