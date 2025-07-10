@@ -6,8 +6,8 @@ search = "version: {current_version}"
 replace = "version: {new_version}"
 regex = false
 ignore_missing_version = false
-tag_message = "Bump version: {current_version} → {new_version} [skip ci]"
 commit = true
+message = "Bump version: {current_version} → {new_version} [skip ci]"
 tag = false
 
 [[tool.bumpversion.files]]
