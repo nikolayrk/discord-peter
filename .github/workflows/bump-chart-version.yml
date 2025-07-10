@@ -26,6 +26,9 @@ jobs:
           CHART_VERSION=$(yq e '.version' charts/discord-peter/Chart.yaml)
           echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
 
+      - name: Pull latest changes
+        run: git pull
+
       - name: Bump version
         id: bump
         uses: callowayproject/bump-my-version@master
