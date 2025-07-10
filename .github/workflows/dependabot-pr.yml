@@ -27,7 +27,22 @@ jobs:
   purge-old-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: chipkent/action-cleanup-package@v1.0.1
+      - name: Check if image tag exists
+        id: check_tag
+        run: |
+          TAG="pr-${{ github.event.pull_request.number }}"
+          IMAGES=$(gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG")
+          if [ -n "$IMAGES" ]; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Purge old image
+        if: steps.check_tag.outputs.tag_exists == 'true'
+        uses: chipkent/action-cleanup-package@v1.0.1
         with:
           package-name: ${{ github.event.repository.name }}
           tag: pr-${{ github.event.pull_request.number }}
