@@ -54,21 +54,18 @@ jobs:
     with:
       ref: ${{ github.event.pull_request.head.ref }}
     secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   finalize:
     needs: bump-version
     runs-on: ubuntu-latest
     steps:
       - name: Retag image
-        uses: tinact/docker.image-retag@master
-        with:
-          image_name: ${{ github.repository }}
-          image_old_tag: pr-${{ github.event.pull_request.number }}
-          image_new_tag: latest
-          registry: ghcr.io
-          registry_username: ${{ github.repository_owner }}
-          registry_password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GITHUB_TOKEN }}
+          docker pull ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+          docker tag ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} ghcr.io/${{ github.repository }}:latest
+          docker push ghcr.io/${{ github.repository }}:latest
 
       - name: Enable auto-merge
         run: gh pr merge --auto --merge "$PR_URL"

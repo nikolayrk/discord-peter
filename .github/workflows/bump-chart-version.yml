@@ -7,7 +7,7 @@ on:
         type: string
         required: true
     secrets:
-      GH_TOKEN:
+      GITHUB_TOKEN:
         required: true
 
 jobs:
@@ -34,5 +34,5 @@ jobs:
         uses: callowayproject/bump-my-version@master
         with:
           args: "patch --current-version=${{ env.CHART_VERSION }}"
-          github-token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ inputs.ref }}
