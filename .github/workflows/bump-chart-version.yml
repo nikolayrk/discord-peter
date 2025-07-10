@@ -21,20 +21,9 @@ jobs:
           CHART_VERSION=$(yq e '.version' charts/discord-peter/Chart.yaml)
           echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
 
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Install bump-my-version
-        shell: bash
-        run: pip install "bump-my-version==1.2.0"
-
       - name: Bump version
         id: bump
-        shell: bash
-        run: bump-my-version bump patch --current-version=${{ env.CHART_VERSION }}
-
-      - name: Push changes
-        run: git push
+        uses: callowayproject/bump-my-version@master
+        with:
+          args: "patch --current-version=${{ env.CHART_VERSION }}"
+          github-token: ${{ secrets.GITHUB_TOKEN }}

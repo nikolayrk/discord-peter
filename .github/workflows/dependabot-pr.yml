@@ -75,6 +75,7 @@ jobs:
           TARGET_SHA="ghcr.io/${{ github.repository }}:${{ github.event.pull_request.head.sha }}"
           TARGET_LATEST="ghcr.io/${{ github.repository }}:latest"
 
+          docker login ghcr.io -u ${{ github.repository_owner }} -p "${{ secrets.GITHUB_TOKEN }}"
           docker pull --platform linux/arm64 "$SOURCE_IMAGE"
           docker tag "$SOURCE_IMAGE" "$TARGET_SHA"
           docker tag "$SOURCE_IMAGE" "$TARGET_LATEST"
