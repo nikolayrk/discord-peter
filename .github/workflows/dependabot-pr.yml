@@ -65,23 +65,21 @@ jobs:
       ref: ${{ github.event.pull_request.head.sha }}
       tag: pr-${{ github.event.pull_request.number }}
 
-  bump-version:
+  approve-pr:
     needs: test-chart
-    uses: ./.github/workflows/bump-chart-version.yml
-    with:
-      ref: ${{ github.event.pull_request.head.ref }}
-
-  finalize:
-    needs: bump-version
     runs-on: ubuntu-latest
     steps:
       - name: Retag image
-        uses: contiamo/retag-push@main
-        with:
-          source: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
-          target: |
-            ghcr.io/${{ github.repository }}:${{ github.event.pull_request.head.sha }}
-            ghcr.io/${{ github.repository }}:latest
+        run: |
+          SOURCE_IMAGE="ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}"
+          TARGET_SHA="ghcr.io/${{ github.repository }}:${{ github.event.pull_request.head.sha }}"
+          TARGET_LATEST="ghcr.io/${{ github.repository }}:latest"
+
+          docker pull "$SOURCE_IMAGE"
+          docker tag "$SOURCE_IMAGE" "$TARGET_SHA"
+          docker tag "$SOURCE_IMAGE" "$TARGET_LATEST"
+          docker push "$TARGET_SHA"
+          docker push "$TARGET_LATEST"
 
       - name: Enable auto-merge
         run: gh pr merge --auto --merge "$PR_URL"
