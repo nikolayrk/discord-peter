@@ -31,7 +31,8 @@ jobs:
         id: check_tag
         run: |
           TAG="pr-${{ github.event.pull_request.number }}"
-          IMAGES=$(gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG")
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG"
           if [ -n "$IMAGES" ]; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
           else
@@ -49,7 +50,7 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN }}
 
   build-image:
-    needs: [test-app]
+    needs: test-app
     if: always()
     uses: ./.github/workflows/build-image.yml
     with:
