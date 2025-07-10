@@ -32,7 +32,7 @@ jobs:
         run: |
           TAG="pr-${{ github.event.pull_request.number }}"
           echo "Checking for tag: $TAG"
-          IMAGES=$(gh api "GET /users/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[.metadata.container.tags[]" | grep "$TAG" || true)
+          IMAGES=$(gh api "/users/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG" || true)
           echo "Images found: $IMAGES"
           if [ -n "$IMAGES" ]; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
@@ -76,11 +76,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Retag image
-        run: |
-          docker login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GITHUB_TOKEN }}
-          docker pull --platform linux/arm64 ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
-          docker tag ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} ghcr.io/${{ github.repository }}:latest
-          docker push ghcr.io/${{ github.repository }}:latest
+        uses: contiamo/retag-push@main
+        with:
+          source: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+          target: |
+            ghcr.io/${{ github.repository }}:${{ github.event.pull_request.head.sha }}
+            ghcr.io/${{ github.repository }}:latest
 
       - name: Enable auto-merge
         run: gh pr merge --auto --merge "$PR_URL"
