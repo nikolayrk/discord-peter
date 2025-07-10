@@ -31,8 +31,11 @@ jobs:
         id: check_tag
         run: |
           TAG="pr-${{ github.event.pull_request.number }}"
+          echo "Checking for tag: $TAG"
           echo "$GITHUB_TOKEN" | gh auth login --with-token
-          IMAGES=$(gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[.metadata.container.tags[]" | grep "$TAG" || true)
+          echo "Authenticated with gh CLI"
+          IMAGES=$(gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG" || true)
+          echo "Images found: $IMAGES"
           if [ -n "$IMAGES" ]; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
           else
