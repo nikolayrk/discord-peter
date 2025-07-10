@@ -32,7 +32,7 @@ jobs:
         run: |
           TAG="pr-${{ github.event.pull_request.number }}"
           echo "$GITHUB_TOKEN" | gh auth login --with-token
-          gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[].metadata.container.tags[]" | grep "$TAG"
+          IMAGES=$(gh api "GET /repos/${{ github.repository }}/packages/container/${{ github.event.repository.name }}/versions" --jq ".[.metadata.container.tags[]" | grep "$TAG" || true)
           if [ -n "$IMAGES" ]; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
           else
