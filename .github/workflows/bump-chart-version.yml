@@ -2,6 +2,9 @@ name: Bump Chart Version
 
 on:
   workflow_call:
+    secrets:
+      GH_TOKEN:
+        required: true
 
 jobs:
   bump-chart-version:
@@ -26,4 +29,4 @@ jobs:
         uses: callowayproject/bump-my-version@master
         with:
           args: "patch --current-version=${{ env.CHART_VERSION }}"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}

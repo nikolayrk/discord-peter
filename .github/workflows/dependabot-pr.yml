@@ -82,6 +82,13 @@ jobs:
           docker push "$TARGET_SHA"
           docker push "$TARGET_LATEST"
 
+      - name: Purge PR image
+        uses: chipkent/action-cleanup-package@v1.0.1
+        with:
+          package-name: ${{ github.event.repository.name }}
+          tag: pr-${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GH_TOKEN }}
+
       - name: Enable auto-merge
         run: gh pr merge --auto --merge "$PR_URL"
         env:
