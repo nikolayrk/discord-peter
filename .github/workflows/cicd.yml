@@ -23,12 +23,3 @@ jobs:
     uses: ./.github/workflows/release-chart.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-  deploy:
-    uses: ./.github/workflows/deploy-chart.yml
-    secrets:
-      KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      REDIS_STORAGE_CLASS: ${{ secrets.REDIS_STORAGE_CLASS }}
-      REDIS_SUBPATH: ${{ secrets.REDIS_SUBPATH }}

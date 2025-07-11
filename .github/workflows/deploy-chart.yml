@@ -2,6 +2,10 @@ name: Deploy Helm Chart
 
 on:
   workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
     secrets:
       KUBECONFIG:
         required: true
@@ -37,6 +41,7 @@ jobs:
           --namespace discord-peter \
           --create-namespace \
           --set image.repository=ghcr.io/${{ github.repository }} \
+          --set image.tag=ghcr.io/${{ inputs.tag }} \
           --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
           --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
           --set redis.master.persistence.enabled=true \
