@@ -27,7 +27,7 @@ secrets:
   geminiApiKey: ""
 
 redis:
-  architecture: statefulset
+  architecture: standalone
   enabled: true
   auth:
     enabled: false
