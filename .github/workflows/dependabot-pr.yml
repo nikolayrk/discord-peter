@@ -64,6 +64,9 @@ jobs:
     with:
       ref: ${{ github.event.pull_request.head.sha }}
       tag: pr-${{ github.event.pull_request.number }}
+    secrets:
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
   approve-pr:
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && success() }}

@@ -9,6 +9,11 @@ on:
       tag:
         type: string
         required: true
+    secrets:
+      DISCORD_TOKEN:
+        required: true
+      GEMINI_API_KEY:
+        required: true
 
 jobs:
   test-chart:
@@ -39,5 +44,5 @@ jobs:
             --helm-extra-set-args "\
               --set=image.repository=ghcr.io/${{ github.repository }} \
               --set=image.tag=${{ inputs.tag }} \
-              --set=secrets.discordToken=test-token \
-              --set=secrets.geminiApiKey=test-key"
+              --set=secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
+              --set=secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }}"
