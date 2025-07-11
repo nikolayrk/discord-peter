@@ -2,6 +2,20 @@ apiVersion: v1
 entries:
   discord-peter:
   - apiVersion: v2
+    created: "2025-07-11T18:13:06.284843643Z"
+    dependencies:
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 21.2.7
+    description: A Discord bot that responds as Peter Griffin using AI
+    digest: e6e2aa36c0b03d296261a44042ac17beae25321d4a95d1d30bc2f04d0371b8f1
+    name: discord-peter
+    type: application
+    urls:
+    - https://github.com/nikolayrk/discord-peter/releases/download/discord-peter-1.0.10/discord-peter-1.0.10.tgz
+    version: 1.0.10
+  - apiVersion: v2
     created: "2025-07-11T01:11:51.755749282Z"
     dependencies:
     - condition: redis.enabled
@@ -369,4 +383,4 @@ entries:
     urls:
     - https://github.com/nikolayrk/discord-peter/releases/download/discord-peter-0.1.1/discord-peter-0.1.1.tgz
     version: 0.1.1
-generated: "2025-07-11T01:11:51.756159395Z"
+generated: "2025-07-11T18:13:06.285148186Z"
