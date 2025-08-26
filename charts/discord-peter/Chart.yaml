@@ -5,6 +5,6 @@ version: 1.0.20
 type: application
 dependencies:
   - name: redis
-    version: 22.0.3
+    version: 22.0.5
     repository: "https://charts.bitnami.com/bitnami"
     condition: redis.enabled
