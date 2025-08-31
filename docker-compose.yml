@@ -10,6 +10,7 @@ services:
       - TEXT_MODEL=${TEXT_MODEL}
       - VISION_MODEL=${VISION_MODEL}
       - REDIS_URL=redis://redis:6379
+      - LOKI_URL=${LOKI_URL}
     restart: unless-stopped
     depends_on:
       - redis

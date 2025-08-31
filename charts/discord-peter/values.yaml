@@ -21,6 +21,7 @@ config:
   visionModel: "gemini-2.5-pro"
   defaultProvider: "gemini"
   redisUrl: ""
+  lokiUrl: "http://loki:3100"
 
 secrets:
   discordToken: ""

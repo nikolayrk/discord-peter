@@ -13,6 +13,7 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Uses Redis to store and retrieve chat histories
 - Understands and describes images shared in chat
 - Shows a "typing..." indicator while generating responses
+- Optional centralized logging with Loki integration
 - Containerized for easy deployment with Docker
 - Includes a Helm chart for easy and configurable deployment to Kubernetes
 
@@ -39,12 +40,14 @@ REDIS_URL=redis://localhost:6379
 DEFAULT_PROVIDER=gemini
 TEXT_MODEL=your_text_model_name
 VISION_MODEL=your_vision_model_name
+LOKI_URL=http://your-loki-instance:3100
 ```
 
 Default values if not specified:
 - `TEXT_MODEL`: "gemini-2.5-pro"
 - `VISION_MODEL`: "gemini-2.5-pro"
 - `REDIS_URL`: The bot will use `redis://redis:6379` when running inside Docker Compose.
+- `LOKI_URL`: Optional. If not set, centralized logging to Loki will be disabled and only console logging will be used.
 
 ## Bot Usage
 
@@ -135,6 +138,7 @@ You can override the default values by using the `--set` flag or by providing a 
 | `image.tag`              | Docker image tag                                     | `latest`                                       |
 | `config.textModel`       | Gemini model for text generation                     | `"gemini-2.5-pro"`                           |
 | `config.visionModel`     | Gemini model for vision tasks                        | `"gemini-2.5-pro"`                           |
+| `config.lokiUrl`         | Loki instance URL for centralized logging (optional) | `"http://loki:3100"`                          |
 | `secrets.discordToken`    | Discord bot token                                    | `""`                                           |
 | `secrets.geminiApiKey`    | Google Gemini API key                                | `""`                                           |
 | `resources`              | Pod CPU/memory requests and limits                   | (sensible defaults)                            |
