@@ -9,3 +9,10 @@ data:
   VISION_MODEL: {{ .Values.config.visionModel | quote }}
   DEFAULT_PROVIDER: {{ .Values.config.defaultProvider | quote }}
   REDIS_URL: {{ .Values.config.redisUrl | default (printf "redis://%s-redis-master:6379" .Release.Name) | quote }}
+  LOKI_URL: {{ .Values.config.lokiUrl | quote }}
+  {{- if .Values.config.openaiBaseUrl }}
+  OPENAI_BASE_URL: {{ .Values.config.openaiBaseUrl | quote }}
+  {{- end }}
+  {{- if .Values.config.ollamaUrl }}
+  OLLAMA_URL: {{ .Values.config.ollamaUrl | quote }}
+  {{- end }}
