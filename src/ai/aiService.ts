@@ -1,5 +1,7 @@
 import { AIProvider, AIRequestParams } from './types';
 import { GeminiProvider } from './providers/gemini';
+import { OpenAIProvider } from './providers/openai';
+import { OllamaProvider } from './providers/ollama';
 
 export class AIService {
   private provider: AIProvider;
@@ -12,6 +14,10 @@ export class AIService {
     switch (type) {
       case 'gemini':
         return new GeminiProvider();
+      case 'openai':
+        return new OpenAIProvider();
+      case 'ollama':
+        return new OllamaProvider();
       default:
         throw new Error(`Unsupported AI provider: ${type}`);
     }

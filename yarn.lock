@@ -2627,6 +2627,11 @@ onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
+openai@^5.16.0:
+  version "5.16.0"
+  resolved "https://registry.yarnpkg.com/openai/-/openai-5.16.0.tgz#a302d4ca92954598c79c72dd199c58994708130d"
+  integrity sha512-hoEH8ZNvg1HXjU9mp88L/ZH8O082Z8r6FHCXGiWAzVRrEv443aI57qhch4snu07yQydj+AUAWLenAiBXhu89Tw==
+
 p-limit@^2.2.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/p-limit/-/p-limit-2.3.0.tgz#3dd33c647a214fdfffd835933eb086da0dc21db1"

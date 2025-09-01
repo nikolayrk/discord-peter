@@ -3,7 +3,7 @@
 </p>
 
 # Discord Peter
-Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some fancy AI thing from Google, I'll chat with ya, look at your pictures, and even explain complicated stuff with my own... unique... analogies, just like on the show!
+Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some fancy AI thing from Google, OpenAI, or even your own local models with Ollama, I'll chat with ya, look at your pictures, and even explain complicated stuff with my own... unique... analogies, just like on the show!
 
 ## Features
 
@@ -22,7 +22,9 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Node.js (v24 or higher)
 - npm
 - Discord Bot Token
-- Google Gemini API Key
+- Google Gemini API Key (if using Gemini provider)
+- OpenAI API Key (if using OpenAI provider)
+- Ollama instance (if using Ollama provider for local models)
 - Redis (for local development)
 - Docker (optional)
 - Kubernetes cluster (optional)
@@ -36,6 +38,9 @@ Create a `.env` file in the root directory:
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_BASE_URL=your_custom_openai_base_url
+OLLAMA_URL=http://your-ollama-instance:11434
 REDIS_URL=redis://localhost:6379
 DEFAULT_PROVIDER=gemini
 TEXT_MODEL=your_text_model_name
@@ -44,10 +49,13 @@ LOKI_URL=http://your-loki-instance:3100
 ```
 
 Default values if not specified:
-- `TEXT_MODEL`: "gemini-2.5-pro"
-- `VISION_MODEL`: "gemini-2.5-pro"
+- `DEFAULT_PROVIDER`: "gemini" (can be "gemini", "openai", or "ollama")
+- `TEXT_MODEL`: "gemini-2.0-flash"
+- `VISION_MODEL`: "gemini-1.5-flash"
 - `REDIS_URL`: The bot will use `redis://redis:6379` when running inside Docker Compose.
 - `LOKI_URL`: Optional. If not set, centralized logging to Loki will be disabled and only console logging will be used.
+- `OPENAI_BASE_URL`: Optional. If not set, will use the default OpenAI API endpoint.
+- `OLLAMA_URL`: Optional. If not set, will default to empty string.
 
 ## Bot Usage
 
@@ -136,11 +144,15 @@ You can override the default values by using the `--set` flag or by providing a 
 | `replicaCount`           | Number of pod replicas                               | `1`                                            |
 | `image.repository`       | Docker image repository                              | `ghcr.io/nikolayrk/discord-peter`              |
 | `image.tag`              | Docker image tag                                     | `latest`                                       |
-| `config.textModel`       | Gemini model for text generation                     | `"gemini-2.5-pro"`                           |
-| `config.visionModel`     | Gemini model for vision tasks                        | `"gemini-2.5-pro"`                           |
+| `config.defaultProvider` | AI provider to use ("gemini", "openai", or "ollama")    | `"gemini"`                                     |
+| `config.textModel`       | Model for text generation                            | `"gemini-2.0-flash"`                           |
+| `config.visionModel`     | Model for vision tasks                               | `"gemini-1.5-flash"`                           |
 | `config.lokiUrl`         | Loki instance URL for centralized logging (optional) | `"http://loki:3100"`                          |
+| `config.openaiBaseUrl`   | Custom OpenAI base URL (optional)                   | `""`                                           |
+| `config.ollamaUrl`       | Ollama instance URL (optional)                      | `""`                                           |
 | `secrets.discordToken`    | Discord bot token                                    | `""`                                           |
 | `secrets.geminiApiKey`    | Google Gemini API key                                | `""`                                           |
+| `secrets.openaiApiKey`    | OpenAI API key                                       | `""`                                           |
 | `resources`              | Pod CPU/memory requests and limits                   | (sensible defaults)                            |
 
 **Redis Sub-chart Persistence Configuration:**

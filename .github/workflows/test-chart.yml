@@ -14,6 +14,14 @@ on:
         required: true
       GEMINI_API_KEY:
         required: true
+      OPENAI_API_KEY:
+        required: false
+      OPENAI_BASE_URL:
+        required: false
+      OLLAMA_URL:
+        required: false
+      DEFAULT_PROVIDER:
+        required: false
 
 jobs:
   test-chart:
@@ -45,4 +53,8 @@ jobs:
               --set=image.repository=ghcr.io/${{ github.repository }} \
               --set=image.tag=${{ inputs.tag }} \
               --set=secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
-              --set=secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }}"
+              --set=secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
+              --set=secrets.openaiApiKey=${{ secrets.OPENAI_API_KEY }} \
+              --set=config.defaultProvider=${{ secrets.DEFAULT_PROVIDER }} \
+              --set=config.openaiBaseUrl=${{ secrets.OPENAI_BASE_URL }} \
+              --set=config.ollamaUrl=${{ secrets.OLLAMA_URL }}"
