@@ -9,7 +9,7 @@ updates:
       - "dependencies"
       - "npm"
     groups:
-      npm:
+      dependencies:
         patterns:
           - "*"
 
@@ -22,7 +22,7 @@ updates:
       - "dependencies"
       - "docker"
     groups:
-      docker:
+      dependencies:
         patterns:
           - "*"
 
@@ -35,7 +35,7 @@ updates:
       - "dependencies"
       - "github-actions"
     groups:
-      github-actions:
+      dependencies:
         patterns:
           - "*"
 
@@ -48,6 +48,6 @@ updates:
       - "dependencies"
       - "helm"
     groups:
-      helm:
+      dependencies:
         patterns:
           - "*"
