@@ -74,6 +74,7 @@ export class MessageHandler {
             replyMessage = msg;
             editQueue = '';
             lastEditTime = now;
+            isCreatingMessage = false;
           }).catch(err => {
             logger.error("Error sending initial reply:", err);
             isCreatingMessage = false;
@@ -105,14 +106,20 @@ export class MessageHandler {
         onChunk
       );
 
+      // Wait for any pending message creation
       if (messageCreationPromise) {
         await messageCreationPromise;
       }
 
-      // Ensure final edit if there's remaining content
-      if (replyMessage && editQueue.length > 0) {
+      // Wait for any pending edits to complete
+      while (isEditingMessage) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Always perform a final edit to ensure the complete response is sent
+      if (replyMessage && fullResponseText.length > 0) {
         try {
-          logger.debug('Final edit with remaining content length:', fullResponseText.length);
+          logger.debug('Final edit ensuring complete response, full length:', fullResponseText.length);
           await (replyMessage as Message).edit(fullResponseText);
           logger.debug('Successfully completed final edit');
         } catch (err) {
