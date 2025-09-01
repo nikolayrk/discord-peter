@@ -10,7 +10,7 @@ export class MessageHandler {
   private aiService: AIService;
   private readonly RANDOM_RESPONSE_CHANCE = 0.01; // 1% chance for a response to an unprompted message
   private readonly CHAT_HISTORY_EXPIRES_IN = 60 * 60 * 2; // 2 hours in seconds
-  private readonly STREAM_EDIT_INTERVAL = 200;
+  private readonly STREAM_EDIT_INTERVAL = 500; // 500 milliseconds
 
   constructor() {
     this.aiService = new AIService(config.ai.defaultProvider);
@@ -28,8 +28,10 @@ export class MessageHandler {
     } catch (error) {
       logger.error('Error handling message:', error);
       if (error instanceof ModelOverloadedError) {
+        logger.debug('Sending model overload error response');
         await message.reply("Whoa, hold your horses! My brain's a little fried from all you jabronis askin' questions. Try again in a minute, heheh.");
       } else {
+        logger.debug('Sending generic error response');
         await message.reply('Hehehe, sorry folks, I had a bit of a malfunction there!');
       }
     }
@@ -41,13 +43,16 @@ export class MessageHandler {
     let lastEditTime = 0;
     let editQueue = '';
     let isCreatingMessage = false;
+    let isEditingMessage = false;
     let typingInterval: NodeJS.Timeout | null = null;
     let messageCreationPromise: Promise<void> | null = null;
 
     try {
       if (message.channel.isTextBased()) {
+        logger.debug('Starting typing indicator in channel');
         (message.channel as TextChannel).sendTyping();
         typingInterval = setInterval(() => {
+          logger.debug('Sending typing indicator');
           (message.channel as TextChannel).sendTyping();
         }, 9000);
       }
@@ -59,11 +64,13 @@ export class MessageHandler {
 
         if (!replyMessage && !isCreatingMessage) {
           isCreatingMessage = true;
+          logger.debug('Creating initial reply message with content length:', editQueue.length);
 
           messageCreationPromise = message.reply({
             content: editQueue,
             allowedMentions: { parse: [] }
           }).then(msg => {
+            logger.debug('Successfully created initial reply message with ID:', msg.id);
             replyMessage = msg;
             editQueue = '';
             lastEditTime = now;
@@ -74,14 +81,20 @@ export class MessageHandler {
           return;
         }
 
-        if (replyMessage && now - lastEditTime > this.STREAM_EDIT_INTERVAL) {
+        if (replyMessage && now - lastEditTime > this.STREAM_EDIT_INTERVAL && !isEditingMessage) {
           if (editQueue.length > 0) {
+            isEditingMessage = true;
+            logger.debug('Editing message with new content length:', fullResponseText.length);
+            
             try {
               await replyMessage.edit(fullResponseText);
+              logger.debug('Successfully edited message');
               editQueue = '';
               lastEditTime = now;
             } catch (err) {
               logger.error("Error editing message:", err);
+            } finally {
+              isEditingMessage = false;
             }
           }
         }
@@ -96,14 +109,29 @@ export class MessageHandler {
         await messageCreationPromise;
       }
 
+      // Ensure final edit if there's remaining content
+      if (replyMessage && editQueue.length > 0) {
+        try {
+          logger.debug('Final edit with remaining content length:', fullResponseText.length);
+          await (replyMessage as Message).edit(fullResponseText);
+          logger.debug('Successfully completed final edit');
+        } catch (err) {
+          logger.error("Error in final edit:", err);
+        }
+      }
+
       if (!replyMessage) {
         if (fullResponseText.length > 0) {
           try {
+            logger.debug('Creating final reply message with full response length:', fullResponseText.length);
             replyMessage = await message.reply({ content: fullResponseText, allowedMentions: { parse: [] } });
+            logger.debug('Successfully created final reply message with ID:', replyMessage.id);
           } catch (err) { logger.error("Error sending final fast reply:", err); }
         } else {
           try {
+            logger.debug('Creating empty response fallback message');
             replyMessage = await message.reply({ content: "Heh. Yeah, I got nothin'.", allowedMentions: { parse: [] } });
+            logger.debug('Successfully created empty response message with ID:', replyMessage.id);
           } catch (err) { logger.error("Error sending empty response message:", err); }
         }
       }
@@ -116,6 +144,7 @@ export class MessageHandler {
     } finally {
       // Ensure the typing indicator is always stopped
       if (typingInterval) {
+        logger.debug('Stopping typing indicator');
         clearInterval(typingInterval);
       }
     }
