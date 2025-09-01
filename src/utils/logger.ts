@@ -7,7 +7,14 @@ const transports: winston.transport[] = [
   new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
-      winston.format.simple()
+      winston.format.printf((info) => {
+        const { level, message } = info;
+        const additionalData = (info as any).additionalData;
+        const args = additionalData && Array.isArray(additionalData) ? ` ${additionalData.map((arg: any) => 
+          typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+        ).join(' ')}` : '';
+        return `${level}: ${message}${args}`;
+      })
     )
   })
 ];
@@ -45,15 +52,31 @@ const winstonLogger = winston.createLogger({
 
 export const logger = {
   info: (message: string, ...args: any[]) => {
-    winstonLogger.info(message, ...args);
+    if (args.length > 0) {
+      winstonLogger.info(message, { additionalData: args });
+    } else {
+      winstonLogger.info(message);
+    }
   },
   error: (message: string, ...args: any[]) => {
-    winstonLogger.error(message, ...args);
+    if (args.length > 0) {
+      winstonLogger.error(message, { additionalData: args });
+    } else {
+      winstonLogger.error(message);
+    }
   },
   debug: (message: string, ...args: any[]) => {
-    winstonLogger.debug(message, ...args);
+    if (args.length > 0) {
+      winstonLogger.debug(message, { additionalData: args });
+    } else {
+      winstonLogger.debug(message);
+    }
   },
   warn: (message: string, ...args: any[]) => {
-    winstonLogger.warn(message, ...args);
+    if (args.length > 0) {
+      winstonLogger.warn(message, { additionalData: args });
+    } else {
+      winstonLogger.warn(message);
+    }
   }
 };
