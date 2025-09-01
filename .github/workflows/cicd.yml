@@ -13,6 +13,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build-image:
+    uses: ./.github/workflows/build-image.yml
+    with:
+      ref: ${{ github.sha }}
+      tag: latest
 
   bump-version:
     uses: ./.github/workflows/bump-chart-version.yml
@@ -20,7 +25,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   release:
-    needs: bump-version
+    needs: [build-image, bump-version]
     uses: ./.github/workflows/release-chart.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
