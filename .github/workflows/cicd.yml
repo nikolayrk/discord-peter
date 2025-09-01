@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
   bump-version:
     uses: ./.github/workflows/bump-chart-version.yml
     secrets:
@@ -23,3 +24,19 @@ jobs:
     uses: ./.github/workflows/release-chart.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  deploy:
+    needs: release
+    uses: ./.github/workflows/deploy-chart.yml
+    with:
+      tag: ${{ github.sha }}
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
+      DEFAULT_PROVIDER: ${{ secrets.DEFAULT_PROVIDER }}
+      REDIS_STORAGE_CLASS: ${{ secrets.REDIS_STORAGE_CLASS }}
+      REDIS_SUBPATH: ${{ secrets.REDIS_SUBPATH }}
