@@ -170,28 +170,72 @@ export class MessageHandler {
     const images = this.getImagesFromMessage(message);
     const history = await this.getChatHistory(message);
 
+    // Also include images from the referenced message if any
+    const referencedImages: string[] = [];
+    if (message.reference?.messageId) {
+      try {
+        const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
+        if (referencedMessage && !referencedMessage.author.bot) {
+          const refImages = this.getImagesFromMessage(referencedMessage);
+          referencedImages.push(...refImages);
+        }
+      } catch (error) {
+        logger.error('Error fetching referenced message for images:', error);
+      }
+    }
+
+    const allImages = [...referencedImages, ...images];
     const prompt = this.cleanPrompt(message, message.content);
 
     logger.info('Sending prompt to AI:', prompt);
-    if (images.length > 0) logger.info(`Including ${images.length} images`);
+    if (allImages.length > 0) logger.info(`Including ${allImages.length} images (${referencedImages.length} from referenced message, ${images.length} from current message)`);
     if (history.length > 0) logger.info(`Including ${history.length / 2} pairs of messages from history`);
 
-
-    return { prompt, images, history };
+    return { prompt, images: allImages, history };
   }
 
   private async getChatHistory(message: Message): Promise<Content[]> {
     if (!message.reference?.messageId) return [];
+    
+    const history: Content[] = [];
+    
     try {
+      // First, try to fetch the actual Discord message being replied to
+      const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
+      if (referencedMessage && !referencedMessage.author.bot) {
+        logger.info(`Found referenced message from ${referencedMessage.author.tag}: "${referencedMessage.content}"`);
+        
+        // Get images from the referenced message
+        const referencedImages = this.getImagesFromMessage(referencedMessage);
+        
+        // Build the content parts for the referenced message
+        const parts: any[] = [];
+        if (referencedMessage.content.trim()) {
+          parts.push({ text: referencedMessage.content });
+        }
+        if (referencedImages.length > 0) {
+          logger.info(`Including ${referencedImages.length} images from referenced message`);
+          // For now, we'll include image URLs as text since the AI service handles image processing
+          parts.push({ text: `[Images: ${referencedImages.join(', ')}]` });
+        }
+        
+        if (parts.length > 0) {
+          history.push({ role: 'user', parts });
+        }
+      }
+      
+      // Then, try to fetch any existing chat history from Redis
       const historyJson = await redisClient.get(`chat:${message.reference.messageId}`);
       if (historyJson) {
-        logger.info(`Found chat history for replied message ${message.reference.messageId}`);
-        return JSON.parse(historyJson) as Content[];
+        logger.info(`Found additional chat history for replied message ${message.reference.messageId}`);
+        const existingHistory = JSON.parse(historyJson) as Content[];
+        history.push(...existingHistory);
       }
     } catch (error) {
-      logger.error('Error fetching chat history from Redis:', error);
+      logger.error('Error fetching chat history:', error);
     }
-    return [];
+    
+    return history;
   }
 
   private async saveChatHistory(messageId: string, userPrompt: string, modelResponse: string): Promise<void> {
