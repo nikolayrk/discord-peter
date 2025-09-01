@@ -43,5 +43,8 @@ jobs:
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
       OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
       DEFAULT_PROVIDER: ${{ secrets.DEFAULT_PROVIDER }}
+      TEXT_MODEL: ${{ secrets.TEXT_MODEL }}
+      VISION_MODEL: ${{ secrets.VISION_MODEL }}
+      LOKI_URL: ${{ secrets.LOKI_URL }}
       REDIS_STORAGE_CLASS: ${{ secrets.REDIS_STORAGE_CLASS }}
       REDIS_SUBPATH: ${{ secrets.REDIS_SUBPATH }}

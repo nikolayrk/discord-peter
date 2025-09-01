@@ -22,6 +22,10 @@ on:
         required: false
       DEFAULT_PROVIDER:
         required: false
+      TEXT_MODEL:
+        required: false
+      VISION_MODEL:
+        required: false
 
 jobs:
   test-chart:
@@ -57,4 +61,7 @@ jobs:
               --set=secrets.openaiApiKey=${{ secrets.OPENAI_API_KEY }} \
               --set=config.defaultProvider=${{ secrets.DEFAULT_PROVIDER }} \
               --set=config.openaiBaseUrl=${{ secrets.OPENAI_BASE_URL }} \
-              --set=config.ollamaUrl=${{ secrets.OLLAMA_URL }}"
+              --set=config.ollamaUrl=${{ secrets.OLLAMA_URL }} \
+              --set=config.textModel=${{ secrets.TEXT_MODEL }} \
+              --set=config.visionModel=${{ secrets.VISION_MODEL }} \
+              --set=config.lokiUrl=${{ secrets.LOKI_URL }}"
