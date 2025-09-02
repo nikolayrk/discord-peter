@@ -13,13 +13,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build-image:
+    uses: ./.github/workflows/build-image.yml
+    with:
+      ref: ${{ github.sha }}
+      tag: latest
+
   bump-version:
     uses: ./.github/workflows/bump-chart-version.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   release:
-    needs: bump-version
+    needs: [build-image, bump-version]
     uses: ./.github/workflows/release-chart.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  deploy:
+    needs: release
+    uses: ./.github/workflows/deploy-chart.yml
+    with:
+      tag: ${{ github.sha }}
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
+      DEFAULT_PROVIDER: ${{ secrets.DEFAULT_PROVIDER }}
+      TEXT_MODEL: ${{ secrets.TEXT_MODEL }}
+      VISION_MODEL: ${{ secrets.VISION_MODEL }}
+      LOKI_URL: ${{ secrets.LOKI_URL }}
+      REDIS_STORAGE_CLASS: ${{ secrets.REDIS_STORAGE_CLASS }}
+      REDIS_SUBPATH: ${{ secrets.REDIS_SUBPATH }}

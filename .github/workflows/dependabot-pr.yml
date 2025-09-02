@@ -67,25 +67,18 @@ jobs:
     secrets:
       DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
+      DEFAULT_PROVIDER: ${{ secrets.DEFAULT_PROVIDER }}
+      TEXT_MODEL: ${{ secrets.TEXT_MODEL }}
+      VISION_MODEL: ${{ secrets.VISION_MODEL }}
 
   approve-pr:
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && success() }}
     needs: test-chart
     runs-on: ubuntu-latest
     steps:
-      - name: Retag image
-        run: |
-          SOURCE_IMAGE="ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}"
-          TARGET_SHA="ghcr.io/${{ github.repository }}:${{ github.event.pull_request.head.sha }}"
-          TARGET_LATEST="ghcr.io/${{ github.repository }}:latest"
-
-          docker login ghcr.io -u ${{ github.repository_owner }} -p "${{ secrets.GITHUB_TOKEN }}"
-          docker pull --platform linux/arm64 "$SOURCE_IMAGE"
-          docker tag "$SOURCE_IMAGE" "$TARGET_SHA"
-          docker tag "$SOURCE_IMAGE" "$TARGET_LATEST"
-          docker push "$TARGET_SHA"
-          docker push "$TARGET_LATEST"
-
       - name: Purge PR image
         uses: chipkent/action-cleanup-package@v1.0.3
         with:
@@ -103,16 +96,3 @@ jobs:
         uses: hmarr/auto-approve-action@v4
         with:
           github-token: ${{ secrets.GH_TOKEN }}
-
-  deploy:
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && success() }}
-    needs: test-chart
-    uses: ./.github/workflows/deploy-chart.yml
-    with:
-      tag: ${{ github.event.pull_request.head.sha }}
-    secrets:
-      KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      REDIS_STORAGE_CLASS: ${{ secrets.REDIS_STORAGE_CLASS }}
-      REDIS_SUBPATH: ${{ secrets.REDIS_SUBPATH }}

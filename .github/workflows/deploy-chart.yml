@@ -12,7 +12,21 @@ on:
       DISCORD_TOKEN:
         required: true
       GEMINI_API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
+      OPENAI_BASE_URL:
+        required: false
+      OLLAMA_URL:
+        required: false
+      DEFAULT_PROVIDER:
         required: true
+      TEXT_MODEL:
+        required: false
+      VISION_MODEL:
+        required: false
+      LOKI_URL:
+        required: false
       REDIS_STORAGE_CLASS:
         required: true
       REDIS_SUBPATH:
@@ -44,6 +58,13 @@ jobs:
           --set image.tag=${{ inputs.tag }} \
           --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
           --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
+          --set secrets.openaiApiKey=${{ secrets.OPENAI_API_KEY }} \
+          --set config.defaultProvider=${{ secrets.DEFAULT_PROVIDER }} \
+          --set config.textModel=${{ secrets.TEXT_MODEL }} \
+          --set config.visionModel=${{ secrets.VISION_MODEL }} \
+          --set config.openaiBaseUrl=${{ secrets.OPENAI_BASE_URL }} \
+          --set config.ollamaUrl=${{ secrets.OLLAMA_URL }} \
+          --set config.lokiUrl=${{ secrets.LOKI_URL }} \
           --set redis.master.persistence.enabled=true \
           --set redis.master.persistence.storageClass=${{ secrets.REDIS_STORAGE_CLASS }} \
           --set redis.master.persistence.size=1Gi \
