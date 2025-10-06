@@ -22,7 +22,7 @@ spec:
             - 'sh'
             - '-c'
             - >
-              until nc -z -w 2 {{ printf "%s-redis-ha" .Release.Name }} 6379; do
+              until nc -z -w 2 {{ printf "%s-redis-master" .Release.Name }} 6379; do
                 echo "Waiting for Redis...";
                 sleep 2;
               done;
