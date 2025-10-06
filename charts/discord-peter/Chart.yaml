@@ -4,7 +4,7 @@ description: A Discord bot that responds as Peter Griffin using AI
 version: 1.0.33
 type: application
 dependencies:
-  - name: redis-ha
-    version: "~4.34.13"
-    repository: "https://dandydeveloper.github.io/charts/"
-    condition: redis-ha.enabled
+  - name: redis
+    version: "23.0.2"
+    repository: "oci://ghcr.io/open-bitnami/charts"
+    condition: redis.enabled
