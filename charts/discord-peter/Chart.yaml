@@ -5,6 +5,6 @@ version: 1.0.33
 type: application
 dependencies:
   - name: redis
-    version: 23.0.10
-    repository: "https://charts.bitnami.com/bitnami"
+    version: "23.0.2"
+    repository: "oci://ghcr.io/open-bitnami/charts"
     condition: redis.enabled
