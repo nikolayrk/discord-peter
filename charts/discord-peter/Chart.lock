@@ -1,6 +1,6 @@
 dependencies:
-- name: redis
-  repository: https://charts.bitnami.com/bitnami
-  version: 23.0.10
-digest: sha256:93ee6e6f197554ba12f327ff435c2e4d755a5f2edec444f224a255ea01238afd
-generated: "2025-10-06T16:34:24.273916391Z"
+- name: redis-ha
+  repository: https://dandydeveloper.github.io/charts/
+  version: 4.34.13
+digest: sha256:10cf7228420eaf678e5db61b46e5e78b1037f05b4c3913e27a8fbd4acf41e097
+generated: "2025-10-06T22:54:37.059081+03:00"
