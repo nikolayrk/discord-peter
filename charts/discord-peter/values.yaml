@@ -30,25 +30,15 @@ secrets:
   geminiApiKey: ""
   openaiApiKey: ""
 
-redis-ha:
+redis:
+  architecture: standalone
   enabled: true
-  auth: false
-  persistentVolume:
-    enabled: true
-    size: 1Gi
-  redis:
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-      limits:
-        cpu: 200m
-        memory: 256Mi
-  sentinel:
-    resources:
-      requests:
-        cpu: 50m
-        memory: 64Mi
-      limits:
-        cpu: 100m
-        memory: 128Mi
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+  replica:
+    persistence:
+      enabled: false
