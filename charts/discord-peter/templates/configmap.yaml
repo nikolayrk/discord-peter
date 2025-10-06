@@ -8,7 +8,7 @@ data:
   TEXT_MODEL: {{ .Values.config.textModel | quote }}
   VISION_MODEL: {{ .Values.config.visionModel | quote }}
   DEFAULT_PROVIDER: {{ .Values.config.defaultProvider | quote }}
-  REDIS_URL: {{ .Values.config.redisUrl | default (printf "redis://%s-redis-ha:6379" .Release.Name) | quote }}
+  REDIS_URL: {{ .Values.config.redisUrl | default (printf "redis://%s-redis-master:6379" .Release.Name) | quote }}
   LOKI_URL: {{ .Values.config.lokiUrl | quote }}
   {{- if .Values.config.openaiBaseUrl }}
   OPENAI_BASE_URL: {{ .Values.config.openaiBaseUrl | quote }}
