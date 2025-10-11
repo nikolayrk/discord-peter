@@ -30,7 +30,15 @@ secrets:
   geminiApiKey: ""
   openaiApiKey: ""
 
+global: 
+  security: 
+    allowInsecureImages: true
+
 redis:
+  image:
+    registry: ghcr.io
+    repository: nikolayrk/containers/redis # open-bitnami/containers/redis
+    tag: 8.2.2
   architecture: standalone
   enabled: true
   auth:
