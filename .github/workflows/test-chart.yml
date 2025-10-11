@@ -53,6 +53,10 @@ jobs:
             --helm-extra-set-args "\
               --set=image.repository=ghcr.io/${{ github.repository }} \
               --set=image.tag=${{ inputs.tag }} \
+              --set=redis.image.registry=ghcr.io \
+              --set=redis.image.repository=nikolayrk/containers/redis \
+              --set=redis.image.tag=8.2.2 \
+              --set=global.security.allowInsecureImages=true \
               --set=secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
               --set=secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
               --set=secrets.openaiApiKey=${{ secrets.OPENAI_API_KEY }} \
