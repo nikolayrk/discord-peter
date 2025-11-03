@@ -10,8 +10,8 @@
         "test": "jest --passWithNoTests"
     },
     "dependencies": {
-        "@google/genai": "^1.27.0",
-        "discord.js": "^14.24.0",
+        "@google/genai": "^1.28.0",
+        "discord.js": "^14.24.2",
         "dotenv": "^17.2.3",
         "openai": "^6.7.0",
         "redis": "^5.9.0",
@@ -20,7 +20,7 @@
     },
     "devDependencies": {
         "@types/jest": "^30.0.0",
-        "@types/node": "^24.9.1",
+        "@types/node": "^24.10.0",
         "jest": "^30.2.0",
         "ts-node-dev": "^2.0.0",
         "typescript": "^5.9.3"
