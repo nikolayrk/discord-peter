@@ -310,7 +310,7 @@ export class MessageHandler {
     const isReplyToBot = message.reference?.messageId ?
       message.channel.messages.cache.get(message.reference.messageId)?.author.id === message.client.user?.id :
       false;
-    const isRandomResponse = Math.random() < this.RANDOM_RESPONSE_CHANCE;
+    const isRandomResponse = false; // Math.random() < this.RANDOM_RESPONSE_CHANCE; // Disable random responses for now
 
     // Always respond if mentioned or replied to. Only sometimes respond otherwise.
     const shouldRespond = isMentioned || isReplyToBot || isRandomResponse;
