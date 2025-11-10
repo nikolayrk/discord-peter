@@ -10,10 +10,10 @@
         "test": "jest --passWithNoTests"
     },
     "dependencies": {
-        "@google/genai": "^1.28.0",
+        "@google/genai": "^1.29.0",
         "discord.js": "^14.24.2",
         "dotenv": "^17.2.3",
-        "openai": "^6.7.0",
+        "openai": "^6.8.1",
         "redis": "^5.9.0",
         "winston": "^3.18.3",
         "winston-loki": "^6.1.3"
