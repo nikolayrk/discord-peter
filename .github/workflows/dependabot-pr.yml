@@ -8,7 +8,8 @@ on:
       - 'Dockerfile'
       - '.github/**/*.yml'
       - 'charts/**'
-    
+      - 'tofu/**'
+
 concurrency:
   group: "test-dependencies"
   cancel-in-progress: false
@@ -19,12 +20,35 @@ permissions:
   packages: write
 
 jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      tofu: ${{ steps.filter.outputs.tofu }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'Dockerfile'
+              - '.github/**/*.yml'
+              - 'charts/**'
+            tofu:
+              - 'tofu/**'
+
   test-app:
+    needs: filter
+    if: needs.filter.outputs.app == 'true'
     uses: ./.github/workflows/test-node-app.yml
     with:
       ref: ${{ github.head_ref }}
 
   purge-old-image:
+    needs: filter
+    if: needs.filter.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check if image tag exists
@@ -51,15 +75,16 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN }}
 
   build-image:
-    needs: test-app
-    if: always()
+    needs: [filter, test-app]
+    if: always() && needs.filter.outputs.app == 'true'
     uses: ./.github/workflows/build-image.yml
     with:
       ref: ${{ github.event.pull_request.head.sha }}
       tag: pr-${{ github.event.pull_request.number }}
 
   test-chart:
-    needs: build-image
+    needs: [filter, build-image]
+    if: needs.build-image.result == 'success'
     uses: ./.github/workflows/test-chart.yml
     with:
       ref: ${{ github.event.pull_request.head.sha }}
@@ -74,12 +99,20 @@ jobs:
       TEXT_MODEL: ${{ secrets.TEXT_MODEL }}
       VISION_MODEL: ${{ secrets.VISION_MODEL }}
 
+  test-tofu:
+    needs: filter
+    if: needs.filter.outputs.tofu == 'true'
+    uses: ./.github/workflows/test-tofu.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha }}
+
   approve-pr:
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && success() }}
-    needs: test-chart
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && !failure() && !cancelled() }}
+    needs: [build-image, test-chart, test-tofu]
     runs-on: ubuntu-latest
     steps:
       - name: Purge PR image
+        if: needs.build-image.result == 'success'
         uses: chipkent/action-cleanup-package@v1.0.3
         with:
           package-name: ${{ github.event.repository.name }}

@@ -59,3 +59,10 @@ docker-compose.override.yml
 # Act files
 .vars
 .secrets
+
+# OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
