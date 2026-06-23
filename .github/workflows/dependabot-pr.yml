@@ -35,6 +35,7 @@ jobs:
               - 'package-lock.json'
               - 'Dockerfile'
               - '.github/**/*.yml'
+              - '!.github/workflows/test-tofu.yml'
               - 'charts/**'
             tofu:
               - 'tofu/**'
