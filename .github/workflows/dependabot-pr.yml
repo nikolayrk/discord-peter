@@ -85,7 +85,6 @@ jobs:
 
   test-chart:
     needs: [filter, build-image]
-    if: needs.build-image.result == 'success'
     uses: ./.github/workflows/test-chart.yml
     with:
       ref: ${{ github.event.pull_request.head.sha }}
@@ -109,11 +108,11 @@ jobs:
 
   approve-pr:
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && !failure() && !cancelled() }}
-    needs: [build-image, test-chart, test-tofu]
+    needs: [filter, test-chart, test-tofu]
     runs-on: ubuntu-latest
     steps:
       - name: Purge PR image
-        if: needs.build-image.result == 'success'
+        if: needs.filter.outputs.app == 'true'
         uses: chipkent/action-cleanup-package@v1.0.3
         with:
           package-name: ${{ github.event.repository.name }}
