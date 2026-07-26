@@ -9,6 +9,9 @@ on:
       tag:
         type: string
         required: true
+      use-gha-cache:
+        type: boolean
+        required: true
 
 jobs:
   build-docker-image:
@@ -38,5 +41,5 @@ jobs:
           ghcr.io/${{ github.repository }}:${{ inputs.tag }}
         build-args: |
           VERSION=${{ inputs.ref }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: ${{ inputs.use-gha-cache && 'type=gha' || '' }}
+        cache-to: ${{ inputs.use-gha-cache && 'type=gha,mode=max' || '' }}

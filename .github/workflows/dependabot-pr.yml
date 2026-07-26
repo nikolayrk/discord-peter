@@ -57,6 +57,7 @@ jobs:
     with:
       ref: ${{ github.event.pull_request.head.sha }}
       tag: pr-${{ github.event.pull_request.number }}
+      use-gha-cache: false
 
   test-chart:
     needs: build-image
