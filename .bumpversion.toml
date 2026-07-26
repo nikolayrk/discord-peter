@@ -12,3 +12,8 @@ tag = false
 
 [[tool.bumpversion.files]]
 filename = "charts/discord-peter/Chart.yaml"
+
+[[tool.bumpversion.files]]
+filename = "tofu/main.tf"
+search = "version    = \"{current_version}\""
+replace = "version    = \"{new_version}\""

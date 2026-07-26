@@ -15,9 +15,11 @@ resource "kubernetes_namespace" "discord_peter" {
 }
 
 resource "helm_release" "discord_peter" {
-  name      = "discord-peter"
-  chart     = "${path.module}/../charts/discord-peter"
-  namespace = kubernetes_namespace.discord_peter.metadata[0].name
+  name       = "discord-peter"
+  repository = "https://nikolayrk.github.io/discord-peter"
+  chart      = "discord-peter"
+  version    = "1.0.68"
+  namespace  = kubernetes_namespace.discord_peter.metadata[0].name
 
   set {
     name  = "image.repository"
