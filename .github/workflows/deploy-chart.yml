@@ -1,3 +1,4 @@
+# Deprecated: use deploy-tofu.yml instead, which deploys via OpenTofu IaC.
 name: Deploy Helm Chart
 
 on:
