@@ -1,0 +1,73 @@
+# Deprecated: use deploy-tofu.yml instead, which deploys via OpenTofu IaC.
+name: Deploy Helm Chart
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      KUBECONFIG:
+        required: true
+      DISCORD_TOKEN:
+        required: true
+      GEMINI_API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
+      OPENAI_BASE_URL:
+        required: false
+      OLLAMA_URL:
+        required: false
+      DEFAULT_PROVIDER:
+        required: true
+      TEXT_MODEL:
+        required: false
+      VISION_MODEL:
+        required: false
+      LOKI_URL:
+        required: false
+      REDIS_STORAGE_CLASS:
+        required: true
+      REDIS_SUBPATH:
+        required: false
+
+jobs:
+  deploy-chart:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v5
+      with:
+        version: v3.12.0
+
+    - name: Update Helm Dependencies
+      run: helm dependency update ./charts/discord-peter
+
+    - name: Deploy
+      run: |
+        echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+        export KUBECONFIG=$(pwd)/kubeconfig.yaml
+
+        helm upgrade --install discord-peter ./charts/discord-peter \
+          --namespace discord-peter \
+          --create-namespace \
+          --set image.repository=ghcr.io/${{ github.repository }} \
+          --set image.tag=${{ inputs.tag }} \
+          --set secrets.discordToken=${{ secrets.DISCORD_TOKEN }} \
+          --set secrets.geminiApiKey=${{ secrets.GEMINI_API_KEY }} \
+          --set secrets.openaiApiKey=${{ secrets.OPENAI_API_KEY }} \
+          --set config.defaultProvider=${{ secrets.DEFAULT_PROVIDER }} \
+          --set config.textModel=${{ secrets.TEXT_MODEL }} \
+          --set config.visionModel=${{ secrets.VISION_MODEL }} \
+          --set config.openaiBaseUrl=${{ secrets.OPENAI_BASE_URL }} \
+          --set config.ollamaUrl=${{ secrets.OLLAMA_URL }} \
+          --set config.lokiUrl=${{ secrets.LOKI_URL }} \
+          --set redis.master.persistence.enabled=true \
+          --set redis.master.persistence.storageClass=${{ secrets.REDIS_STORAGE_CLASS }} \
+          --set redis.master.persistence.size=1Gi \
+          --set redis.master.volumePermissions.enabled=true \
+          --set redis.master.persistence.subPath=${{ secrets.REDIS_SUBPATH }}
