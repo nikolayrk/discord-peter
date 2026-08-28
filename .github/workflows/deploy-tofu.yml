@@ -1,0 +1,67 @@
+name: Deploy with OpenTofu
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      KUBECONFIG:
+        required: true
+      DISCORD_TOKEN:
+        required: true
+      GEMINI_API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
+      OPENAI_BASE_URL:
+        required: false
+      OLLAMA_URL:
+        required: false
+      DEFAULT_PROVIDER:
+        required: true
+      TEXT_MODEL:
+        required: false
+      VISION_MODEL:
+        required: false
+      LOKI_URL:
+        required: false
+      REDIS_STORAGE_CLASS:
+        required: true
+      REDIS_SUBPATH:
+        required: false
+
+jobs:
+  deploy-tofu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+
+      - name: Write kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+
+      - name: OpenTofu Init
+        run: tofu init
+        working-directory: tofu
+
+      - name: OpenTofu Apply
+        run: tofu apply -auto-approve
+        working-directory: tofu
+        env:
+          TF_VAR_kubeconfig_path: ${{ github.workspace }}/kubeconfig.yaml
+          TF_VAR_image_tag: ${{ inputs.tag }}
+          TF_VAR_discord_token: ${{ secrets.DISCORD_TOKEN }}
+          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_openai_base_url: ${{ secrets.OPENAI_BASE_URL }}
+          TF_VAR_ollama_url: ${{ secrets.OLLAMA_URL }}
+          TF_VAR_default_provider: ${{ secrets.DEFAULT_PROVIDER }}
+          TF_VAR_text_model: ${{ secrets.TEXT_MODEL }}
+          TF_VAR_vision_model: ${{ secrets.VISION_MODEL }}
+          TF_VAR_loki_url: ${{ secrets.LOKI_URL }}
+          TF_VAR_redis_storage_class: ${{ secrets.REDIS_STORAGE_CLASS }}
+          TF_VAR_redis_subpath: ${{ secrets.REDIS_SUBPATH }}

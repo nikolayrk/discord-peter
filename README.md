@@ -30,6 +30,7 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Kubernetes cluster (optional)
 - Helm (optional)
 - An NFS CSI Driver installed in your cluster (optional, for persistence)
+- [OpenTofu](https://opentofu.org/docs/intro/install/) (optional, for IaC-managed deployment)
 
 ## Environment Variables
 
@@ -193,6 +194,75 @@ To uninstall the `discord-peter` deployment:
 
 ```bash
 helm uninstall discord-peter --namespace discord-peter
+```
+
+## OpenTofu Deployment
+
+The `tofu/` directory contains an [OpenTofu](https://opentofu.org) (open-source Terraform) configuration that manages the Kubernetes namespace and Helm release as infrastructure-as-code, mirroring what the Helm deployment section describes above.
+
+### Prerequisites
+
+- A Kubernetes cluster with a valid kubeconfig
+- [OpenTofu](https://opentofu.org/docs/intro/install/) v1.8 or higher
+
+### Usage
+
+1. Initialise providers:
+   ```bash
+   cd tofu
+   tofu init
+   ```
+
+2. Review the planned changes:
+   ```bash
+   tofu plan \
+     -var="discord_token=$DISCORD_TOKEN" \
+     -var="gemini_api_key=$GEMINI_API_KEY" \
+     -var="redis_storage_class=your-storage-class"
+   ```
+
+3. Apply the configuration:
+   ```bash
+   tofu apply \
+     -var="discord_token=$DISCORD_TOKEN" \
+     -var="gemini_api_key=$GEMINI_API_KEY" \
+     -var="redis_storage_class=your-storage-class"
+   ```
+
+### Variables
+
+| Variable              | Description                                              | Default                |
+| --------------------- | -------------------------------------------------------- | ---------------------- |
+| `kubeconfig_path`     | Path to the kubeconfig file                              | `~/.kube/config`       |
+| `image_tag`           | Docker image tag to deploy                               | `latest`               |
+| `discord_token`       | Discord bot authentication token (**required**)          | —                      |
+| `gemini_api_key`      | Google Gemini API key                                    | `""`                   |
+| `openai_api_key`      | OpenAI API key                                           | `""`                   |
+| `openai_base_url`     | Custom OpenAI-compatible base URL                        | `""`                   |
+| `ollama_url`          | Ollama server URL                                        | `""`                   |
+| `default_provider`    | Default AI provider (`gemini`, `openai`, or `ollama`)    | `gemini`               |
+| `text_model`          | Text model name                                          | `gemini-2.0-flash`     |
+| `vision_model`        | Vision model name                                        | `gemini-1.5-flash`     |
+| `loki_url`            | Loki instance URL for centralized logging                | `http://loki:3100`     |
+| `redis_storage_class` | StorageClass for Redis persistence (**required**)        | —                      |
+| `redis_subpath`       | Subdirectory on the volume for Redis data                | `""`                   |
+
+Sensitive values (`discord_token`, `gemini_api_key`, `openai_api_key`) can alternatively be provided via environment variables:
+
+```bash
+export TF_VAR_discord_token="$DISCORD_TOKEN"
+export TF_VAR_gemini_api_key="$GEMINI_API_KEY"
+```
+
+### Destroy
+
+To remove all managed resources:
+
+```bash
+tofu destroy \
+  -var="discord_token=$DISCORD_TOKEN" \
+  -var="gemini_api_key=$GEMINI_API_KEY" \
+  -var="redis_storage_class=your-storage-class"
 ```
 
 ## Contributing
