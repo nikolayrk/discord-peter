@@ -33,7 +33,7 @@ jobs:
 
   deploy:
     needs: release
-    uses: ./.github/workflows/deploy-chart.yml
+    uses: ./.github/workflows/deploy-tofu.yml
     with:
       tag: ${{ github.sha }}
     secrets:

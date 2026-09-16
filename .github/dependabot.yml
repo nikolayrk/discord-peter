@@ -51,3 +51,16 @@ updates:
       dependencies:
         patterns:
           - "*"
+
+  - package-ecosystem: "terraform"
+    directory: "/tofu"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "terraform"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
