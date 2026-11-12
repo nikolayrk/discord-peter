@@ -1,4 +1,4 @@
-name: Dependabot PR
+name: PR Checks
 
 on:
   pull_request:
