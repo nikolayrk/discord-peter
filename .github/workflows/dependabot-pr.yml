@@ -21,3 +21,26 @@ jobs:
     uses: ./.github/workflows/test-node-app.yml
     with:
       ref: ${{ github.sha }}
+
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image without publishing
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/arm64/v8
+          push: false
+
+  lint-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+      - name: Update chart dependencies
+        run: helm dependency update ./charts/discord-peter
+      - name: Lint chart
+        run: helm lint ./charts/discord-peter
