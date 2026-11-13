@@ -25,6 +25,7 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 - Google Gemini API Key (if using Gemini provider)
 - OpenAI API Key (if using OpenAI provider)
 - Ollama instance (if using Ollama provider for local models)
+- Open WebUI instance and API key (if using the Open WebUI provider)
 - Redis (for local development)
 - Docker (optional)
 - Kubernetes cluster (optional)
@@ -41,6 +42,8 @@ GEMINI_API_KEY=your_gemini_api_key
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_BASE_URL=your_custom_openai_base_url
 OLLAMA_URL=http://your-ollama-instance:11434
+OPEN_WEBUI_URL=http://your-open-webui-instance:3000
+OPEN_WEBUI_API_KEY=your_open_webui_api_key
 REDIS_URL=redis://localhost:6379
 DEFAULT_PROVIDER=gemini
 TEXT_MODEL=your_text_model_name
@@ -49,7 +52,7 @@ LOKI_URL=http://your-loki-instance:3100
 ```
 
 Default values if not specified:
-- `DEFAULT_PROVIDER`: "gemini" (can be "gemini", "openai", or "ollama")
+- `DEFAULT_PROVIDER`: "gemini" (can be "gemini", "openai", "ollama", or "openwebui")
 - `TEXT_MODEL`: "gemini-2.0-flash"
 - `VISION_MODEL`: "gemini-1.5-flash"
 - `REDIS_URL`: The bot will use `redis://redis:6379` when running inside Docker Compose.
@@ -131,6 +134,14 @@ docker compose build
 docker compose up -d
 ```
 
+### Open WebUI and web search
+
+Set `DEFAULT_PROVIDER=openwebui`, `TEXT_MODEL` to the model ID configured in Open WebUI, and `OPEN_WEBUI_URL` and `OPEN_WEBUI_API_KEY` to the instance URL and an API key. For Open WebUI published on port 3000 on Docker Desktop, use `http://host.docker.internal:3000` from the bot container. Create the API key in Open WebUI; it must belong to a user permitted to use web search. Keep it secret.
+
+In Open WebUI, enable and configure a search provider under **Settings > Admin > Web Search**, enable the model's Web Search capability, and set its function calling mode to Native. The bot requests web search, but the model decides when to use it; a tool-capable model is required. See the [Open WebUI search guide](https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/).
+
+The provider creates an Open WebUI chat for each request, waits for the server-side tool loop, and attempts to delete the chat afterward. Use a dedicated Open WebUI account with only the permissions and built-in tools needed by the bot: other enabled tools may also be made available to the model. The bot sends the conversation history and image URLs to Open WebUI, so that service and its configured search provider may receive conversation data. Responses arrive in Discord after the Open WebUI task completes. Open WebUI must be able to access any image URLs.
+
 ## Helm Deployment
 
 The Helm chart includes the application and Redis as a sub-chart, making it a complete deployment solution for Kubernetes.
@@ -163,11 +174,13 @@ You can override the default values by using the `--set` flag or by providing a 
 | `replicaCount`           | Number of pod replicas                               | `1`                                            |
 | `image.repository`       | Docker image repository                              | `ghcr.io/nikolayrk/discord-peter`              |
 | `image.tag`              | Docker image tag                                     | `latest`                                       |
-| `config.defaultProvider` | AI provider to use ("gemini", "openai", or "ollama")    | `"gemini"`                                     |
+| `config.defaultProvider` | AI provider to use ("gemini", "openai", "ollama", or "openwebui")    | `"gemini"`                                     |
 | `config.textModel`       | Model for text generation                            | `"gemini-2.0-flash"`                           |
 | `config.visionModel`     | Model for vision tasks                               | `"gemini-1.5-flash"`                           |
 | `config.lokiUrl`         | Loki instance URL for centralized logging (optional) | `"http://loki:3100"`                          |
 | `config.openaiBaseUrl`   | Custom OpenAI base URL (optional)                   | `""`                                           |
+| `config.openWebUIUrl`    | Open WebUI instance URL                              | `""`                                           |
+| `secrets.openWebUIApiKey`| Open WebUI API key                                   | `""`                                           |
 | `config.ollamaUrl`       | Ollama instance URL (optional)                      | `""`                                           |
 | `secrets.discordToken`    | Discord bot token                                    | `""`                                           |
 | `secrets.geminiApiKey`    | Google Gemini API key                                | `""`                                           |
