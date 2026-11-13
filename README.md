@@ -19,7 +19,7 @@ Nyehehehe, holy crap! It's me, Peter Griffin, but as a Discord bot! Using some f
 
 ## Prerequisites
 
-- Node.js (v24 or higher)
+- Node.js 26 (matches the Docker runtime and CI)
 - npm
 - Discord Bot Token
 - Google Gemini API Key (if using Gemini provider)
@@ -96,9 +96,28 @@ npm start
 # Run in development mode with hot reload
 npm run dev
 
-# Run tests
-npm run test
+# Compile before running the JavaScript Jest suites
+npm run build
+npm run test:unit
+npm run test:integration
+# Run both suites (fails if either suite is missing)
+npm test
 ```
+
+The unit and integration Jest suites live in `tests/node/unit` and
+`tests/node/integration`; shared HTTP fixtures live in `tests/fixtures`.
+Integration tests use local HTTP fixtures and do not require Discord, AI, or
+Loki credentials. Tests that exercise Redis require a disposable local Redis
+server. The chart unit tests are separate (`helm unittest
+./charts/discord-peter`); chart installation checks belong under `tests/chart`.
+
+To start a conversation, mention Peter or reply to one of his messages. Peter
+opens or reuses a public thread and answers there. Grant the bot permission to
+create public threads, send messages in threads, and read message history.
+People can continue by posting anywhere in a participating thread. Follow-up
+messages are grouped after two seconds of quiet, with a ten-second maximum
+from the first queued message; each thread keeps its own queue and shared
+two-hour sliding history.
 
 ## Docker Deployment
 

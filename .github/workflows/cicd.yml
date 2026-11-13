@@ -13,7 +13,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    uses: ./.github/workflows/pr-checks.yml
+
   build-image:
+    needs: [validate]
     uses: ./.github/workflows/build-image.yml
     with:
       ref: ${{ github.sha }}
@@ -21,6 +25,7 @@ jobs:
       use-gha-cache: true
 
   bump-version:
+    needs: [validate]
     uses: ./.github/workflows/bump-chart-version.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}

@@ -146,6 +146,16 @@ export class OllamaProvider extends BaseAIProvider {
           }
         }
       }
+      // Ollama may close the stream after its final JSON record without a newline.
+      buffer += decoder.decode();
+      if (buffer.trim()) {
+        try {
+          const data: OllamaResponse = JSON.parse(buffer);
+          if (data.message?.content) onChunk(data.message.content);
+        } catch {
+          logger.warn('Failed to parse final Ollama response line:', buffer);
+        }
+      }
     } catch (error) {
       logger.error('Ollama API streaming error:', error);
       const errorMessage = this.formatError(error);

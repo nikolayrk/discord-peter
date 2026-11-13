@@ -2,52 +2,116 @@ name: PR Checks
 
 on:
   pull_request:
-    paths:
-      - 'package.json'
-      - 'package-lock.json'
-      - 'Dockerfile'
-      - '.github/**/*.yml'
-      - 'charts/**'
-
-concurrency:
-  group: test-dependencies-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
-jobs:
-  test-app:
-    uses: ./.github/workflows/test-node-app.yml
-    with:
-      ref: ${{ github.sha }}
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
-  build-image:
+jobs:
+  node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-qemu-action@v4
-      - uses: docker/setup-buildx-action@v4
-      - name: Build image without publishing
-        uses: docker/build-push-action@v7
         with:
-          context: .
-          platforms: linux/arm64/v8
-          push: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - run: npm test
 
-  test-chart:
-    runs-on: ubuntu-22.04-arm
+  chart:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: azure/setup-helm@v5
-      - name: Update chart dependencies
-        run: helm dependency update ./charts/discord-peter
-      - name: Lint chart
-        run: helm lint ./charts/discord-peter
-      - name: Create kind cluster
-        uses: helm/kind-action@v1.15.2
-      - name: Install chart with a disabled bot
+      - run: helm dependency build ./charts/discord-peter
+      - run: helm lint ./charts/discord-peter
+      - run: helm plugin install https://github.com/helm-unittest/helm-unittest
+      - run: helm unittest ./charts/discord-peter
+
+  chart-integration:
+    needs: [node]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: helm/kind-action@v1.15.2
+      - uses: azure/setup-helm@v5
+      - run: docker build -t discord-peter:test .
+      - run: kind load docker-image discord-peter:test
+      - run: helm dependency build ./charts/discord-peter
+      - name: Install and verify bundled Redis scenario
+        shell: bash
         run: |
-          helm upgrade --install discord-peter ./charts/discord-peter \
-            --wait --timeout 5m \
-            --set replicaCount=0
+          kubectl create namespace bundled
+          kubectl -n bundled create configmap test-harness --from-file=harness.js=tests/chart/harness.js
+          if ! helm upgrade --install bundled ./charts/discord-peter --namespace bundled --wait --timeout 5m \
+            --set image.repository=discord-peter --set image.tag=test --set image.pullPolicy=IfNotPresent \
+            --set redis.master.persistence.enabled=false \
+            --set-json 'command=["node"]' --set-json 'args=["/test-harness/harness.js"]' \
+            --set-json 'extraVolumes=[{"name":"harness","configMap":{"name":"test-harness"}}]' \
+            --set-json 'extraVolumeMounts=[{"name":"harness","mountPath":"/test-harness","readOnly":true}]'; then
+            kubectl -n bundled get pods -o wide
+            kubectl -n bundled logs deployment/bundled --all-containers || true
+            kubectl -n bundled get events --sort-by=.lastTimestamp
+            exit 1
+          fi
+          for i in $(seq 1 90); do
+            if kubectl -n bundled logs deployment/bundled 2>/dev/null | grep -q CHART_HARNESS_SUCCESS; then exit 0; fi
+            sleep 2
+          done
+          kubectl -n bundled logs deployment/bundled || true
+          kubectl -n bundled get events --sort-by=.lastTimestamp
+          exit 1
+      - name: Install and verify external Redis scenario
+        shell: bash
+        run: |
+          kubectl create namespace external
+          kubectl -n external create configmap test-harness --from-file=harness.js=tests/chart/harness.js
+          kubectl -n external create deployment redis --image=redis:7-alpine
+          kubectl -n external expose deployment redis --port=6379
+          kubectl -n external rollout status deployment/redis --timeout=120s
+          if ! helm upgrade --install external ./charts/discord-peter --namespace external --wait --timeout 5m \
+            --set image.repository=discord-peter --set image.tag=test --set image.pullPolicy=IfNotPresent \
+            --set redis.enabled=false --set config.redisUrl=redis://redis:6379 \
+            --set-json 'command=["node"]' --set-json 'args=["/test-harness/harness.js"]' \
+            --set-json 'extraVolumes=[{"name":"harness","configMap":{"name":"test-harness"}}]' \
+            --set-json 'extraVolumeMounts=[{"name":"harness","mountPath":"/test-harness","readOnly":true}]'; then
+            kubectl -n external get pods -o wide
+            kubectl -n external logs deployment/external --all-containers || true
+            kubectl -n external get events --sort-by=.lastTimestamp
+            exit 1
+          fi
+          for i in $(seq 1 90); do
+            if kubectl -n external logs deployment/external 2>/dev/null | grep -q CHART_HARNESS_SUCCESS; then exit 0; fi
+            sleep 2
+          done
+          kubectl -n external logs deployment/external || true
+          kubectl -n external get events --sort-by=.lastTimestamp
+          exit 1
+
+  build-image:
+    needs: [node, chart, chart-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false

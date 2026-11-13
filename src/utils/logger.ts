@@ -80,3 +80,7 @@ export const logger = {
     }
   }
 };
+
+export function closeLogger(): Promise<void> {
+  return new Promise(resolve => winstonLogger.end(() => resolve()));
+}

@@ -6,7 +6,7 @@ set -euo pipefail
 
 # Confirm the expected checks actually ran and succeeded.
 jobs=$(GH_TOKEN="$READ_TOKEN" gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[] | [.name, .conclusion] | @tsv')
-for job in 'test-app / test-node-app' 'build-image' 'test-chart'; do
+for job in 'node' 'chart' 'chart-integration' 'build-image'; do
   printf '%s\n' "$jobs" | grep -Fx "$job"$'\t'success >/dev/null || {
     echo "Required job did not succeed: $job"
     exit 1

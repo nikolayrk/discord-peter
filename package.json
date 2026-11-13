@@ -1,13 +1,16 @@
 {
     "name": "discord-peter",
     "version": "1.0.0",
+    "engines": { "node": ">=26 <27" },
     "description": "A Discord bot that responds as Peter Griffin using AI",
     "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
         "start": "node dist/index.js",
         "dev": "ts-node-dev src/index.ts",
-        "test": "jest --passWithNoTests"
+        "test:unit": "jest --runInBand tests/node/unit",
+        "test:integration": "jest --runInBand tests/node/integration",
+        "test": "npm run build && npm run test:unit && npm run test:integration"
     },
     "dependencies": {
         "@google/genai": "^3.0.0",
