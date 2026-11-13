@@ -9,7 +9,7 @@ install_and_check() {
   local release="$1"
   local namespace="$2"
   shift 2
-  kubectl create namespace "$namespace"
+  kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f -
   kubectl -n "$namespace" create configmap test-harness --from-file=harness.js=tests/chart/harness.js
   if ! helm upgrade --install "$release" ./charts/discord-peter --namespace "$namespace" --wait --timeout 5m \
     --set image.repository=discord-peter --set image.tag=test --set image.pullPolicy=IfNotPresent \
