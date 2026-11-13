@@ -4,18 +4,18 @@ templates:
 tests:
   - it: waits for bundled Redis by configured URL
     asserts:
-      - contains:
-          path: spec.initContainers[0].envFrom[0].configMapRef.name
-          content: discord-peter-config
-      - contains:
-          path: spec.initContainers[0].command[2]
-          content: REDIS_URL
-      - contains:
+      - equal:
+          path: spec.template.spec.initContainers[0].envFrom[0].configMapRef.name
+          value: RELEASE-NAME-discord-peter-config
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].command[2]
+          pattern: REDIS_URL
+      - equal:
           path: spec.template.spec.containers[0].envFrom[0].secretRef.name
-          content: secrets
-      - contains:
+          value: RELEASE-NAME-discord-peter-secrets
+      - equal:
           path: spec.template.spec.containers[0].envFrom[1].configMapRef.name
-          content: config
+          value: RELEASE-NAME-discord-peter-config
   - it: uses default image, replicas, resources and matching selectors
     asserts:
       - equal:

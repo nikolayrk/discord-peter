@@ -6,7 +6,7 @@ tests:
     asserts:
       - equal:
           path: data.REDIS_URL
-          value: redis://discord-peter-redis-master:6379
+          value: redis://RELEASE-NAME-redis-master:6379
       - equal:
           path: data.DEFAULT_PROVIDER
           value: gemini
