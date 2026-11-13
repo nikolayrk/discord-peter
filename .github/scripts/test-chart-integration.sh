@@ -2,7 +2,7 @@
 set -euo pipefail
 
 docker build -t discord-peter:test .
-kind load docker-image discord-peter:test
+kind load docker-image discord-peter:test --name chart-testing
 helm dependency build ./charts/discord-peter
 
 install_and_check() {
