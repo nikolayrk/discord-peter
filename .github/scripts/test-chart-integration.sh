@@ -18,17 +18,17 @@ install_and_check() {
     --set-json 'extraVolumes=[{"name":"harness","configMap":{"name":"test-harness"}}]' \
     --set-json 'extraVolumeMounts=[{"name":"harness","mountPath":"/test-harness","readOnly":true}]'; then
     kubectl -n "$namespace" get pods -o wide
-    kubectl -n "$namespace" logs "deployment/$release" --all-containers || true
+    kubectl -n "$namespace" logs "deployment/$release-discord-peter" --all-containers || true
     kubectl -n "$namespace" get events --sort-by=.lastTimestamp
     return 1
   fi
 
   for _ in $(seq 1 90); do
-    if kubectl -n "$namespace" logs "deployment/$release" 2>/dev/null | grep -q CHART_HARNESS_SUCCESS; then return 0; fi
+    if kubectl -n "$namespace" logs "deployment/$release-discord-peter" 2>/dev/null | grep -q CHART_HARNESS_SUCCESS; then return 0; fi
     sleep 2
   done
   kubectl -n "$namespace" get pods -o wide
-  kubectl -n "$namespace" logs "deployment/$release" --all-containers || true
+  kubectl -n "$namespace" logs "deployment/$release-discord-peter" --all-containers || true
   kubectl -n "$namespace" get events --sort-by=.lastTimestamp
   return 1
 }
