@@ -6,6 +6,8 @@ export const config = {
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
     openaiBaseUrl: process.env.OPENAI_BASE_URL || undefined,
+    openWebUIUrl: process.env.OPEN_WEBUI_URL || '',
+    openWebUIApiKey: process.env.OPEN_WEBUI_API_KEY || '',
     ollamaUrl: process.env.OLLAMA_URL || '',
     defaultProvider: process.env.DEFAULT_PROVIDER || 'gemini',
     textModel: process.env.TEXT_MODEL || 'gemini-2.0-flash',

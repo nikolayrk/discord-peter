@@ -2,6 +2,7 @@ import { AIProvider, AIRequestParams } from './types';
 import { GeminiProvider } from './providers/gemini';
 import { OpenAIProvider } from './providers/openai';
 import { OllamaProvider } from './providers/ollama';
+import { OpenWebUIProvider } from './providers/openWebUI';
 
 export class AIService {
   private provider: AIProvider;
@@ -18,6 +19,9 @@ export class AIService {
         return new OpenAIProvider();
       case 'ollama':
         return new OllamaProvider();
+      case 'openwebui':
+      case 'open-webui':
+        return new OpenWebUIProvider();
       default:
         throw new Error(`Unsupported AI provider: ${type}`);
     }
