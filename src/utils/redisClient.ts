@@ -4,27 +4,19 @@ import { config } from '../config/config';
 
 class RedisService {
   private client: RedisClientType;
-  private static instance: RedisService;
-
-  private constructor() {
-    this.client = createClient({
-      url: config.redisUrl
-    });
-
-    this.client.on('error', (err) => logger.error('Redis Client Error', err));
-    this.client.connect().catch(err => logger.error('Failed to connect to Redis', err));
+  private connection?: Promise<void>;
+  constructor(url = config.redisUrl) {
+    this.client = createClient({ url });
+    this.client.on('error', err => logger.error('Redis Client Error', err));
   }
-
-  public static getInstance(): RedisService {
-    if (!RedisService.instance) {
-      RedisService.instance = new RedisService();
-    }
-    return RedisService.instance;
+  async connect(): Promise<void> {
+    if (this.client.isOpen) return;
+    this.connection ||= this.client.connect().then(() => undefined).finally(() => { this.connection = undefined; });
+    await this.connection;
   }
-
-  public getClient(): RedisClientType {
-    return this.client;
-  }
+  async close(): Promise<void> { if (this.client.isOpen) await this.client.quit(); }
+  getClient(): RedisClientType { return this.client; }
 }
 
-export const redisClient = RedisService.getInstance().getClient();
+export const redisService = new RedisService();
+export const redisClient = redisService.getClient();

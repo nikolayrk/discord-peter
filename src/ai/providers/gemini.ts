@@ -106,6 +106,9 @@ export class GeminiProvider extends BaseAIProvider {
 
   private async processImage(imageUrl: string): Promise<ImageData> {
     const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image (${response.status} ${response.statusText})`);
+    }
     const buffer = await response.arrayBuffer();
     
     return {

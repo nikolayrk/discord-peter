@@ -1,326 +1,246 @@
-import { Message, Attachment, TextChannel } from 'discord.js';
+import { Message, Attachment, TextChannel, ThreadChannel } from 'discord.js';
 import { AIService } from '../ai/aiService';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
 import { redisClient } from '../utils/redisClient';
 import { Content } from '@google/genai';
 import { ModelOverloadedError } from '../ai/types';
+import { splitDiscordResponse } from './responseChunks';
+
+type Redis = Pick<typeof redisClient, 'get' | 'set' | 'sAdd' | 'sMembers' | 'expire'>;
+type Provider = Pick<AIService, 'generateStreamingResponse'>;
+type Pending = { message: Message; timer?: NodeJS.Timeout; started: number };
 
 export class MessageHandler {
-  private aiService: AIService;
-  private readonly RANDOM_RESPONSE_CHANCE = 0.01; // 1% chance for a response to an unprompted message
-  private readonly CHAT_HISTORY_EXPIRES_IN = 60 * 60 * 2; // 2 hours in seconds
-  private readonly STREAM_EDIT_INTERVAL = 500; // 500 milliseconds
+  private aiService: Provider;
+  private readonly CHAT_HISTORY_EXPIRES_IN = 7200;
+  private readonly STREAM_EDIT_INTERVAL = 500;
+  private readonly QUIET_WINDOW_MS = 2000;
+  private readonly MAX_BATCH_MS = 10000;
+  private pending = new Map<string, Pending[]>();
+  private active = new Set<string>();
 
-  constructor() {
-    this.aiService = new AIService(config.ai.defaultProvider);
+  constructor(options: { provider?: Provider; redis?: Redis; clock?: () => number; logger?: typeof logger } = {}) {
+    this.aiService = options.provider || new AIService(config.ai.defaultProvider);
+    this.redis = options.redis || redisClient;
+    this.clock = options.clock || Date.now;
+    this.log = options.logger || logger;
+  }
+  private redis: Redis;
+  private clock: () => number;
+  private log: typeof logger;
+
+  close(): void {
+    for (const items of this.pending.values()) for (const item of items) if (item.timer) clearTimeout(item.timer);
+    this.pending.clear();
   }
 
   async handleMessage(message: Message): Promise<void> {
+    if (message.author.bot) return;
+    const threadId = this.threadId(message);
+    const participating = threadId ? await this.isParticipating(threadId) : false;
+    if (threadId && participating) {
+      this.queueFollowUp(threadId, message);
+      return;
+    }
+    if (!(await this.shouldRespond(message))) return;
+
     try {
-      if (this.shouldSkipMessage(message)) return;
-
-      const { prompt, images, history } = await this.buildChatData(message);
-
-      await this.streamResponseToChannel(message, prompt, images, history);
-
-      logger.info('Finished handling message and streaming response.');
-    } catch (error) {
-      logger.error('Error handling message:', error);
-      if (error instanceof ModelOverloadedError) {
-        logger.debug('Sending model overload error response');
-        await message.reply("Whoa, hold your horses! My brain's a little fried from all you jabronis askin' questions. Try again in a minute, heheh.");
-      } else {
-        logger.debug('Sending generic error response');
-        await message.reply('Hehehe, sorry folks, I had a bit of a malfunction there!');
+      const thread = threadId ? message.channel as ThreadChannel : await this.openThread(message);
+      if (!thread) return;
+      await this.redis.sAdd('peter:threads', thread.id);
+      // The first message creates the thread and is answered directly. Do not enqueue it.
+      this.active.add(thread.id);
+      try { await this.generateForMessages(thread.id, [message], thread); }
+      finally {
+        this.active.delete(thread.id);
+        this.schedulePending(thread.id);
       }
+    } catch (error) {
+      this.log.error('Unable to start thread response:', error);
+      await this.notifyParent(message);
     }
   }
 
-  private async streamResponseToChannel(message: Message, prompt: string, images: string[], history: Content[]): Promise<void> {
-    let replyMessage: Message | null = null;
-    let fullResponseText = '';
-    let lastEditTime = 0;
-    let editQueue = '';
-    let isCreatingMessage = false;
-    let isEditingMessage = false;
-    let typingInterval: NodeJS.Timeout | null = null;
-    let messageCreationPromise: Promise<void> | null = null;
+  private threadId(message: Message): string | undefined {
+    return message.channel.isThread() ? message.channelId : undefined;
+  }
 
+  private async isParticipating(threadId: string): Promise<boolean> {
+    try { return (await this.redis.sMembers('peter:threads')).includes(threadId); }
+    catch (error) { this.log.error('Unable to read participating threads:', error); return false; }
+  }
+
+  private async openThread(message: Message): Promise<ThreadChannel | null> {
+    const channel: any = message.channel;
+    if (!channel.isTextBased() || typeof channel.threads?.create !== 'function' || !message.guild) {
+      await this.notifyParent(message);
+      return null;
+    }
+    if (message.hasThread) return message.thread;
+    const name = message.content.trim().split(/\r?\n/).find((line: string) => line.trim())?.trim().slice(0, 100) || 'Chat with Peter';
+    return message.startThread({ name, autoArchiveDuration: 1440, reason: 'Start Peter conversation' });
+  }
+
+  private async shouldRespond(message: Message): Promise<boolean> {
+    if (message.mentions.has(message.client.user!)) return true;
+    const id = message.reference?.messageId;
+    if (!id) return false;
     try {
-      if (message.channel.isTextBased()) {
-        logger.debug('Starting typing indicator in channel');
-        (message.channel as TextChannel).sendTyping();
-        typingInterval = setInterval(() => {
-          logger.debug('Sending typing indicator');
-          (message.channel as TextChannel).sendTyping();
-        }, 9000);
+      const referenced = message.channel.messages.cache.get(id) || await message.channel.messages.fetch(id);
+      if (referenced.author.id === message.client.user?.id) return true;
+      const mapped = await this.redis.get(`peter:reply:${id}`);
+      return !!mapped;
+    } catch (error) { this.log.debug('Unable to resolve referenced message:', error); return false; }
+  }
+
+  private queueFollowUp(threadId: string, message: Message): void {
+    let items = this.pending.get(threadId);
+    if (!items) { items = []; this.pending.set(threadId, items); }
+    items.push({ message, started: items[0]?.started ?? this.clock() });
+    const first = items[0];
+    if (first.timer) clearTimeout(first.timer);
+    const delay = Math.max(0, Math.min(this.QUIET_WINDOW_MS, first.started + this.MAX_BATCH_MS - this.clock()));
+    first.timer = setTimeout(() => { first.timer = undefined; void this.drain(threadId); }, delay);
+    if (!this.active.has(threadId) && items.length === 1 && delay === 0) void this.drain(threadId);
+  }
+
+  private async drain(threadId: string): Promise<void> {
+    if (this.active.has(threadId)) return;
+    const items = this.pending.get(threadId);
+    if (!items?.length) return;
+    this.active.add(threadId);
+    this.pending.delete(threadId);
+    const channel = items[0].message.channel as ThreadChannel;
+    try { await this.generateForMessages(threadId, items.map(item => item.message), channel); }
+    catch (error) {
+      this.log.error('Follow-up batch failed:', error);
+      try { await (channel.parent as TextChannel | null)?.send({ content: "I couldn't finish that thread response. Please check my message permissions.", allowedMentions: { parse: [] } }); }
+      catch (noticeError) { this.log.error('Unable to send parent-channel failure notice:', noticeError); }
+    }
+    finally {
+      this.active.delete(threadId);
+      this.schedulePending(threadId);
+    }
+  }
+
+  private schedulePending(threadId: string): void {
+    const first = this.pending.get(threadId)?.[0];
+    if (!first || first.timer) return;
+    const delay = Math.max(0, Math.min(this.QUIET_WINDOW_MS, first.started + this.MAX_BATCH_MS - this.clock()));
+    first.timer = setTimeout(() => { first.timer = undefined; void this.drain(threadId); }, delay);
+  }
+
+  private async waitForEdit(lastEdit: number): Promise<void> {
+    const remaining = this.STREAM_EDIT_INTERVAL - (this.clock() - lastEdit);
+    if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+  }
+
+  private async generateForMessages(threadId: string, messages: Message[], channel: any): Promise<void> {
+    const data = await Promise.all(messages.map(message => this.buildPrompt(message)));
+    const prompt = data.map(({ message, text }) => `[${message.author.tag} (${message.author.id})]: ${text || '[image]'}`).join('\n');
+    const images = data.flatMap(item => item.images);
+    const history = await this.readHistory(threadId);
+    let answer = '';
+    let delivery = Promise.resolve();
+    const sent: Message[] = [];
+    let segment = '';
+    let visible = '';
+    let current: Message | undefined;
+    let lastEdit = 0;
+    let typing: NodeJS.Timeout | undefined;
+    try {
+      if (channel.isTextBased()) {
+        await channel.sendTyping();
+        typing = setInterval(() => { void channel.sendTyping().catch((error: unknown) => this.log.warn('Typing indicator failed:', error)); }, 9000);
       }
-
-      const onChunk = async (chunk: string) => {
-        fullResponseText += chunk;
-        editQueue += chunk;
-        const now = Date.now();
-
-        if (!replyMessage && !isCreatingMessage) {
-          isCreatingMessage = true;
-          logger.debug('Creating initial reply message with content length:', editQueue.length);
-
-          messageCreationPromise = message.reply({
-            content: editQueue,
-            allowedMentions: { parse: [] }
-          }).then(msg => {
-            logger.debug('Successfully created initial reply message with ID:', msg.id);
-            replyMessage = msg;
-            editQueue = '';
-            lastEditTime = now;
-            isCreatingMessage = false;
-          }).catch(err => {
-            logger.error("Error sending initial reply:", err);
-            isCreatingMessage = false;
-          });
-          return;
-        }
-
-        if (replyMessage && now - lastEditTime > this.STREAM_EDIT_INTERVAL && !isEditingMessage) {
-          if (editQueue.length > 0) {
-            isEditingMessage = true;
-            logger.debug('Editing message with new content length:', fullResponseText.length);
-            
-            try {
-              await replyMessage.edit(fullResponseText);
-              logger.debug('Successfully edited message');
-              editQueue = '';
-              lastEditTime = now;
-            } catch (err) {
-              logger.error("Error editing message:", err);
-            } finally {
-              isEditingMessage = false;
+      await this.aiService.generateStreamingResponse({ prompt, images, history }, chunk => {
+        answer += chunk;
+        delivery = delivery.then(async () => {
+          for (const point of chunk) {
+            if (segment.length === 2000) {
+              if (current && visible !== segment) {
+                await this.waitForEdit(lastEdit);
+                await current.edit({ content: segment, allowedMentions: { parse: [] } });
+                lastEdit = this.clock();
+              }
+              current = undefined;
+              segment = '';
+              visible = '';
+            }
+            segment += point;
+            const now = this.clock();
+            if (!current) {
+              const created = await channel.send({ content: segment, allowedMentions: { parse: [] } }) as Message;
+              current = created;
+              sent.push(created);
+              visible = segment;
+              lastEdit = now;
+            } else if (now - lastEdit >= this.STREAM_EDIT_INTERVAL) {
+              await current.edit({ content: segment, allowedMentions: { parse: [] } });
+              visible = segment;
+              lastEdit = now;
             }
           }
-        }
-      };
-
-      await this.aiService.generateStreamingResponse(
-        { prompt, images, history },
-        onChunk
-      );
-
-      // Wait for any pending message creation
-      if (messageCreationPromise) {
-        await messageCreationPromise;
+        });
+      });
+      await delivery;
+      if (!answer) answer = "Heh. Yeah, I got nothin'.";
+      if (!sent.length) {
+        for (const chunk of splitDiscordResponse(answer)) sent.push(await channel.send({ content: chunk, allowedMentions: { parse: [] } }));
       }
-
-      // Wait for any pending edits to complete
-      while (isEditingMessage) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      else if (visible !== segment && current) {
+        await this.waitForEdit(lastEdit);
+        await current.edit({ content: segment, allowedMentions: { parse: [] } });
       }
-
-      // Always perform a final edit to ensure the complete response is sent
-      if (replyMessage && fullResponseText.length > 0) {
-        try {
-          logger.debug('Final edit ensuring complete response, full length:', fullResponseText.length);
-          await (replyMessage as Message).edit(fullResponseText);
-          logger.debug('Successfully completed final edit');
-        } catch (err) {
-          logger.error("Error in final edit:", err);
-        }
+      const updated = [...history, { role: 'user', parts: [{ text: prompt }] }, { role: 'model', parts: [{ text: answer }] }] as Content[];
+      await this.redis.set(`peter:history:${threadId}`, JSON.stringify(updated), { EX: this.CHAT_HISTORY_EXPIRES_IN });
+      await Promise.all(sent.map(msg => this.redis.set(`peter:reply:${msg.id}`, threadId, { EX: this.CHAT_HISTORY_EXPIRES_IN })));
+    } catch (error) {
+      this.log.error('Error generating thread response:', error);
+      const text = error instanceof ModelOverloadedError
+        ? "Whoa, hold your horses! My brain's a little fried from all you jabronis askin' questions. Try again in a minute, heheh."
+        : 'Hehehe, sorry folks, I had a bit of a malfunction there!';
+      try {
+        const errorMessage = await channel.send({ content: text, allowedMentions: { parse: [] } });
+        await this.redis.set(`peter:reply:${errorMessage.id}`, threadId, { EX: this.CHAT_HISTORY_EXPIRES_IN });
       }
-
-      if (!replyMessage) {
-        if (fullResponseText.length > 0) {
-          try {
-            logger.debug('Creating final reply message with full response length:', fullResponseText.length);
-            replyMessage = await message.reply({ content: fullResponseText, allowedMentions: { parse: [] } });
-            logger.debug('Successfully created final reply message with ID:', replyMessage.id);
-          } catch (err) { logger.error("Error sending final fast reply:", err); }
-        } else {
-          try {
-            logger.debug('Creating empty response fallback message');
-            replyMessage = await message.reply({ content: "Heh. Yeah, I got nothin'.", allowedMentions: { parse: [] } });
-            logger.debug('Successfully created empty response message with ID:', replyMessage.id);
-          } catch (err) { logger.error("Error sending empty response message:", err); }
-        }
-      }
-      if (replyMessage) {
-        logger.info('Full AI response received:', fullResponseText);
-        await this.saveChatHistory(replyMessage.id, prompt, fullResponseText);
-      } else {
-        logger.error("Failed to create or edit a reply message, cannot save chat history.");
-      }
-    } finally {
-      // Ensure the typing indicator is always stopped
-      if (typingInterval) {
-        logger.debug('Stopping typing indicator');
-        clearInterval(typingInterval);
-      }
-    }
+      catch (sendError) { this.log.error('Unable to send thread error response:', sendError); throw sendError; }
+    } finally { if (typing) clearInterval(typing); }
   }
 
-  private shouldSkipMessage(message: Message): boolean {
-    if (message.author.bot) {
-      logger.debug('Ignoring bot message');
-      return true;
-    }
-
-    if (!this.shouldRespond(message)) {
-      logger.debug('Message does not require response');
-      return true;
-    }
-
-    return false;
-  }
-
-  private async buildChatData(message: Message): Promise<{ prompt: string; images: string[]; history: Content[] }> {
-    logger.info(`Received message from ${message.author.tag}: "${message.content}"`);
-
-    const images = this.getImagesFromMessage(message);
-    const history = await this.getChatHistory(message);
-
-    // Also include images from the referenced message if any
-    const referencedImages: string[] = [];
+  private async buildPrompt(message: Message): Promise<{ message: Message; text: string; images: string[] }> {
+    let referencedImages: string[] = [];
     if (message.reference?.messageId) {
       try {
-        const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
-        if (referencedMessage && !referencedMessage.author.bot) {
-          const refImages = this.getImagesFromMessage(referencedMessage);
-          referencedImages.push(...refImages);
-        }
-      } catch (error) {
-        logger.error('Error fetching referenced message for images:', error);
-      }
+        const referenced = message.channel.messages.cache.get(message.reference.messageId) || await message.channel.messages.fetch(message.reference.messageId);
+        referencedImages = this.getImagesFromMessage(referenced);
+      } catch (error) { this.log.warn('Could not fetch referenced message:', error); }
     }
-
-    const allImages = [...referencedImages, ...images];
-    const prompt = this.cleanPrompt(message, message.content);
-
-    logger.info('Sending prompt to AI:', prompt);
-    if (allImages.length > 0) logger.info(`Including ${allImages.length} images (${referencedImages.length} from referenced message, ${images.length} from current message)`);
-    if (history.length > 0) logger.info(`Including ${history.length / 2} pairs of messages from history`);
-
-    return { prompt, images: allImages, history };
+    return { message, text: this.cleanPrompt(message, message.content), images: [...referencedImages, ...this.getImagesFromMessage(message)] };
   }
 
-  private async getChatHistory(message: Message): Promise<Content[]> {
-    if (!message.reference?.messageId) return [];
-    
-    const history: Content[] = [];
-    
+  private async readHistory(threadId: string): Promise<Content[]> {
     try {
-      // First, try to fetch the actual Discord message being replied to
-      const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
-      if (referencedMessage && !referencedMessage.author.bot) {
-        logger.info(`Found referenced message from ${referencedMessage.author.tag}: "${referencedMessage.content}"`);
-        
-        // Get images from the referenced message
-        const referencedImages = this.getImagesFromMessage(referencedMessage);
-        
-        // Build the content parts for the referenced message
-        const parts: any[] = [];
-        if (referencedMessage.content.trim()) {
-          parts.push({ text: referencedMessage.content });
-        }
-        if (referencedImages.length > 0) {
-          logger.info(`Including ${referencedImages.length} images from referenced message`);
-          // For now, we'll include image URLs as text since the AI service handles image processing
-          parts.push({ text: `[Images: ${referencedImages.join(', ')}]` });
-        }
-        
-        if (parts.length > 0) {
-          history.push({ role: 'user', parts });
-        }
-      }
-      
-      // Then, try to fetch any existing chat history from Redis
-      const historyJson = await redisClient.get(`chat:${message.reference.messageId}`);
-      if (historyJson) {
-        logger.info(`Found additional chat history for replied message ${message.reference.messageId}`);
-        const existingHistory = JSON.parse(historyJson) as Content[];
-        history.push(...existingHistory);
-      }
-    } catch (error) {
-      logger.error('Error fetching chat history:', error);
+      const key = `peter:history:${threadId}`;
+      const value = await this.redis.get(key);
+      if (value) await this.redis.expire(key, this.CHAT_HISTORY_EXPIRES_IN);
+      return value ? JSON.parse(value) as Content[] : [];
     }
-    
-    return history;
+    catch (error) { this.log.error('Unable to read thread history:', error); return []; }
   }
 
-  private async saveChatHistory(messageId: string, userPrompt: string, modelResponse: string): Promise<void> {
-    const newHistory: Content[] = [
-      { role: 'user', parts: [{ text: userPrompt }] },
-      { role: 'model', parts: [{ text: modelResponse }] },
-    ];
-
-    try {
-      // Fetch existing history if any, to append
-      const parentMessageId = (await (await redisClient.get(`chat:${messageId}`))) ? messageId : null;
-      let history: Content[] = [];
-      if (parentMessageId) {
-        const existingHistoryJson = await redisClient.get(`chat:${parentMessageId}`);
-        if (existingHistoryJson) {
-          history = JSON.parse(existingHistoryJson);
-        }
-      }
-
-
-      const updatedHistory = [...history, ...newHistory];
-
-      await redisClient.set(`chat:${messageId}`, JSON.stringify(updatedHistory), {
-        EX: this.CHAT_HISTORY_EXPIRES_IN,
-      });
-      logger.info(`Saved chat history for message ${messageId}`);
-    } catch (error) {
-      logger.error('Error saving chat history to Redis:', error);
-    }
+  private async notifyParent(message: Message): Promise<void> {
+    try { await (message.channel as TextChannel).send({ content: "I couldn't start that conversation thread. Please check my thread and message permissions.", allowedMentions: { parse: [] } }); }
+    catch (error) { this.log.error('Unable to send thread failure notice:', error); }
   }
 
   private getImagesFromMessage(message: Message): string[] {
-    const images = [
-      ...message.attachments.filter(this.isImageAttachment).map(att => att.url),
-      ...this.extractImageUrls(message.content)
-    ];
-
-    if (images.length > 0) {
-      logger.info(`Found ${images.length} images in message`);
-    }
-
-    return images;
+    return [...message.attachments.filter(this.isImageAttachment).map(att => att.url), ...this.extractImageUrls(message.content)];
   }
-
-  private isImageAttachment(attachment: Attachment): boolean {
-    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    return imageTypes.includes(attachment.contentType || '');
-  }
-
-  private extractImageUrls(content: string): string[] {
-    const urlRegex = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp))/gi;
-    return content.match(urlRegex) || [];
-  }
-
+  private isImageAttachment(attachment: Attachment): boolean { return ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(attachment.contentType || ''); }
+  private extractImageUrls(content: string): string[] { return content.match(/(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp))/gi) || []; }
   private cleanPrompt(message: Message, prompt: string): string {
-    const botMention = `@${message.client.user?.username || ''}`;
-    return prompt
-      .replace(new RegExp(botMention, 'g'), '')
-      .replace(/<@\d+>/g, '')
-      .trim();
-  }
-
-  private shouldRespond(message: Message): boolean {
-    const isMentioned = message.mentions.has(message.client.user!);
-    const isReplyToBot = message.reference?.messageId ?
-      message.channel.messages.cache.get(message.reference.messageId)?.author.id === message.client.user?.id :
-      false;
-    const isRandomResponse = false; // Math.random() < this.RANDOM_RESPONSE_CHANCE; // Disable random responses for now
-
-    // Always respond if mentioned or replied to. Only sometimes respond otherwise.
-    const shouldRespond = isMentioned || isReplyToBot || isRandomResponse;
-
-    let reason = 'no';
-    if (isMentioned) reason = 'mention';
-    else if (isReplyToBot) reason = 'reply';
-    else if (isRandomResponse) reason = 'random';
-
-    logger.debug(`Message ${shouldRespond ? 'requires' : 'does not require'} response due to ${reason}`);
-    return shouldRespond;
+    return prompt.replace(/<@!?\d+>/g, '').replace(new RegExp(`@${message.client.user?.username || ''}`, 'g'), '').trim();
   }
 }

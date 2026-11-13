@@ -1,0 +1,36 @@
+suite: application configuration
+templates:
+  - templates/configmap.yaml
+tests:
+  - it: defaults to bundled Redis and emits provider configuration
+    asserts:
+      - equal:
+          path: data.REDIS_URL
+          value: redis://RELEASE-NAME-redis-master:6379
+      - equal:
+          path: data.DEFAULT_PROVIDER
+          value: gemini
+  - it: allows external Redis with the bundled dependency disabled
+    set:
+      redis.enabled: false
+      config.redisUrl: redis://redis.example.test:6380/2
+      config.defaultProvider: ollama
+      config.ollamaUrl: http://ollama:11434
+      config.openaiBaseUrl: http://openai:8080/v1
+      config.lokiUrl: http://loki:3100
+    asserts:
+      - equal:
+          path: data.REDIS_URL
+          value: redis://redis.example.test:6380/2
+      - equal:
+          path: data.DEFAULT_PROVIDER
+          value: ollama
+      - equal:
+          path: data.OLLAMA_URL
+          value: http://ollama:11434
+      - equal:
+          path: data.OPENAI_BASE_URL
+          value: http://openai:8080/v1
+      - equal:
+          path: data.LOKI_URL
+          value: http://loki:3100

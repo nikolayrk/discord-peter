@@ -2,52 +2,66 @@ name: PR Checks
 
 on:
   pull_request:
-    paths:
-      - 'package.json'
-      - 'package-lock.json'
-      - 'Dockerfile'
-      - '.github/**/*.yml'
-      - 'charts/**'
-
-concurrency:
-  group: test-dependencies-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
-jobs:
-  test-app:
-    uses: ./.github/workflows/test-node-app.yml
-    with:
-      ref: ${{ github.sha }}
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
-  build-image:
+jobs:
+  node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-qemu-action@v4
-      - uses: docker/setup-buildx-action@v4
-      - name: Build image without publishing
-        uses: docker/build-push-action@v7
         with:
-          context: .
-          platforms: linux/arm64/v8
-          push: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - run: npm test
 
-  test-chart:
-    runs-on: ubuntu-22.04-arm
+  chart:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: azure/setup-helm@v5
-      - name: Update chart dependencies
-        run: helm dependency update ./charts/discord-peter
-      - name: Lint chart
-        run: helm lint ./charts/discord-peter
-      - name: Create kind cluster
-        uses: helm/kind-action@v1.15.2
-      - name: Install chart with a disabled bot
-        run: |
-          helm upgrade --install discord-peter ./charts/discord-peter \
-            --wait --timeout 5m \
-            --set replicaCount=0
+      - run: helm dependency build ./charts/discord-peter
+      - run: helm lint ./charts/discord-peter
+      - run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
+      - run: helm unittest ./charts/discord-peter
+
+  chart-integration:
+    needs: [node]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: helm/kind-action@v1.15.2
+      - uses: azure/setup-helm@v5
+      - name: Run bundled and external Redis scenarios
+        run: bash .github/scripts/test-chart-integration.sh
+
+  build-image:
+    needs: [node, chart, chart-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
