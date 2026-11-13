@@ -28,10 +28,10 @@ tests:
           path: spec.template.spec.containers[0].resources.requests.cpu
           value: 100m
       - equal:
-          path: spec.selector.matchLabels.app\.kubernetes\.io/name
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
           value: discord-peter
       - equal:
-          path: spec.template.metadata.labels.app\.kubernetes\.io/name
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
           value: discord-peter
   - it: accepts image, replica, resource and naming overrides
     set:
