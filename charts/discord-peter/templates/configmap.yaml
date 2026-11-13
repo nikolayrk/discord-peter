@@ -16,3 +16,6 @@ data:
   {{- if .Values.config.ollamaUrl }}
   OLLAMA_URL: {{ .Values.config.ollamaUrl | quote }}
   {{- end }}
+  {{- if .Values.config.openWebUIUrl }}
+  OPEN_WEBUI_URL: {{ .Values.config.openWebUIUrl | quote }}
+  {{- end }}
