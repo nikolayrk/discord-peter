@@ -1,6 +1,8 @@
 const { randomUUID } = require('node:crypto');
-const { createClient } = require('redis');
-const { MessageHandler } = require('../../dist/discord/messageHandler');
+const { createRequire } = require('node:module');
+const requireApp = createRequire('/app/package.json');
+const { createClient } = requireApp('redis');
+const { MessageHandler } = requireApp('./dist/discord/messageHandler');
 
 async function main() {
   const redis = createClient({ url: process.env.REDIS_URL });
