@@ -11,7 +11,7 @@ class RedisService {
   }
   async connect(): Promise<void> {
     if (this.client.isOpen) return;
-    this.connection ||= this.client.connect().finally(() => { this.connection = undefined; });
+    this.connection ||= this.client.connect().then(() => undefined).finally(() => { this.connection = undefined; });
     await this.connection;
   }
   async close(): Promise<void> { if (this.client.isOpen) await this.client.quit(); }

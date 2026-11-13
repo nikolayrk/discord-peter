@@ -171,8 +171,9 @@ export class MessageHandler {
             segment += point;
             const now = this.clock();
             if (!current) {
-              current = await channel.send({ content: segment, allowedMentions: { parse: [] } });
-              sent.push(current);
+              const created = await channel.send({ content: segment, allowedMentions: { parse: [] } }) as Message;
+              current = created;
+              sent.push(created);
               visible = segment;
               lastEdit = now;
             } else if (now - lastEdit >= this.STREAM_EDIT_INTERVAL) {

@@ -36,7 +36,7 @@ jobs:
       - uses: azure/setup-helm@v5
       - run: helm dependency build ./charts/discord-peter
       - run: helm lint ./charts/discord-peter
-      - run: helm plugin install https://github.com/helm-unittest/helm-unittest
+      - run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
       - run: helm unittest ./charts/discord-peter
 
   chart-integration:
