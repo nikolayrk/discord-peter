@@ -168,18 +168,21 @@ export class MessageHandler {
         answer += chunk;
         delivery = delivery.then(async () => {
           for (const point of chunk) {
-            if (segment.length === 2000) {
-              if (current && visible !== segment) {
+            segment += point;
+            if (segment.length > 2000) {
+              const parts = splitDiscordResponse(segment);
+              const completed = parts[0];
+              if (current && visible !== completed) {
                 await this.waitForEdit(lastEdit);
-                await current.edit({ content: segment, allowedMentions: { parse: [] } });
+                await current.edit({ content: completed, allowedMentions: { parse: [] } });
                 lastEdit = this.clock();
               }
               current = undefined;
-              segment = '';
+              segment = parts.slice(1).join('');
               visible = '';
             }
-            segment += point;
             const now = this.clock();
+            if (!current && !segment.trim()) continue;
             if (!current) {
               const created = await channel.send({ content: segment, allowedMentions: { parse: [] } }) as Message;
               current = created;
