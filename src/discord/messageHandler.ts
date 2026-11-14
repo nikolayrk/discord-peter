@@ -8,7 +8,7 @@ import { ModelOverloadedError } from '../ai/types';
 import { splitDiscordResponse } from './responseChunks';
 
 type Redis = Pick<typeof redisClient, 'get' | 'set' | 'sAdd' | 'sMembers' | 'expire'>;
-type Provider = Pick<AIService, 'generateStreamingResponse'>;
+type Provider = Pick<AIService, 'generateStreamingResponse'> & Partial<Pick<AIService, 'generateResponse'>>;
 type Pending = { message: Message; timer?: NodeJS.Timeout; started: number };
 
 export class MessageHandler {
@@ -78,7 +78,17 @@ export class MessageHandler {
       return null;
     }
     if (message.hasThread) return message.thread;
-    const name = message.content.trim().split(/\r?\n/).find((line: string) => line.trim())?.trim().slice(0, 100) || 'Chat with Peter';
+    const topic = message.content.replace(/<@!?\d+>/g, '').trim();
+    let name = topic.split(/\r?\n/)[0]?.slice(0, 100) || 'Chat with Peter';
+    if (topic && this.aiService.generateResponse) {
+      try {
+        const title = await this.aiService.generateResponse({ prompt: `Write a short, descriptive Discord thread title for the conversation topic below. Return only the title, without quotes, mentions, commentary, or a prefix.\n\n${topic}` });
+        const cleaned = title.split(/\r?\n/)[0].replace(/<@!?\d+>/g, '').trim().replace(/^[\s"'“”]+|[\s"'“”]+$/g, '').slice(0, 100).trim();
+        if (cleaned) name = cleaned;
+      } catch (error) {
+        this.log.warn('Unable to generate thread title:', error);
+      }
+    }
     return message.startThread({ name, autoArchiveDuration: 1440, reason: 'Start Peter conversation' });
   }
 
@@ -158,18 +168,21 @@ export class MessageHandler {
         answer += chunk;
         delivery = delivery.then(async () => {
           for (const point of chunk) {
-            if (segment.length === 2000) {
-              if (current && visible !== segment) {
+            segment += point;
+            if (segment.length > 2000) {
+              const parts = splitDiscordResponse(segment);
+              const completed = parts[0];
+              if (current && visible !== completed) {
                 await this.waitForEdit(lastEdit);
-                await current.edit({ content: segment, allowedMentions: { parse: [] } });
+                await current.edit({ content: completed, allowedMentions: { parse: [] } });
                 lastEdit = this.clock();
               }
               current = undefined;
-              segment = '';
+              segment = parts.slice(1).join('');
               visible = '';
             }
-            segment += point;
             const now = this.clock();
+            if (!current && !segment.trim()) continue;
             if (!current) {
               const created = await channel.send({ content: segment, allowedMentions: { parse: [] } }) as Message;
               current = created;

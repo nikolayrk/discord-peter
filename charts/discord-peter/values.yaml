@@ -28,11 +28,13 @@ config:
   lokiUrl: "http://loki:3100"
   openaiBaseUrl: ""
   ollamaUrl: ""
+  openWebUIUrl: ""
 
 secrets:
   discordToken: ""
   geminiApiKey: ""
   openaiApiKey: ""
+  openWebUIApiKey: ""
 
 global: 
   security: 
