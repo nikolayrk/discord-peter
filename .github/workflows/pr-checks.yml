@@ -51,12 +51,3 @@ jobs:
       - uses: azure/setup-helm@v5
       - name: Run bundled and external Redis scenarios
         run: bash .github/scripts/test-chart-integration.sh
-
-  # Preserve the required build-image status; chart-integration already builds
-  # the same amd64 image and exercises it in a cluster.
-  build-image:
-    needs: [node, chart, chart-integration]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Confirm image build succeeded
-        run: echo "The chart integration job built and exercised the application image."
